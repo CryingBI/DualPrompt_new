@@ -37,6 +37,7 @@ class EPrompt(nn.Module):
                     self.prompt = self.prompt.repeat(1, 2, 1, 1, 1, 1)
                 #
                 else:
+                    # num_layers = 3
                     prompt_pool_shape = (self.num_layers, 2, self.pool_size, self.length, 
                                         self.num_heads, embed_dim // self.num_heads)
                     if prompt_init == 'zero':
@@ -96,6 +97,7 @@ class EPrompt(nn.Module):
             similarity = torch.matmul(prompt_key_norm, x_embed_norm.t()) # pool_size, B or Pool_size, #class, B
             similarity = similarity.t() # B, pool_size
 
+            #top_k = 1
             (similarity_top_k, idx) = torch.topk(similarity, k=self.top_k, dim=1) # B, top_k
             out['similarity'] = similarity
 
