@@ -26,11 +26,13 @@ class PreT_Attention(nn.Module):
     def forward(self, x, prompt):
         B, N, C = x.shape
         qkv = self.qkv(x).reshape(B, N, 3, self.num_heads, C // self.num_heads).permute(2, 0, 3, 1, 4)
+        #q, k, v have same shape #B, num_heads, prompt_length, embed_dim // num_heads
         q, k, v = qkv.unbind(0)   # make torchscript happy (cannot use tensor as tuple)
 
         if prompt is not None:
             # prefix key, value
             prompt = prompt.permute(1, 0, 3, 2, 4).contiguous() # 2, B, num_heads, prompt_length, C // num_heads
+            # pk and pv in paper
             key_prefix = prompt[0] # B, num_heads, prompt_length, embed_dim // num_heads
             value_prefix = prompt[1] # B, num_heads, prompt_length, embed_dim // num_heads
 

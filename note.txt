@@ -1,0 +1,32 @@
+config:
+    - sử dụng cả e và g prompt
+    - sử dụng prefix-tune cho cả e và g
+    ('--prompt_pool', default=True, type=bool,)
+    ('--size', default=10, type=int,)
+    ('--length', default=5,type=int, )
+    ('--top_k', default=1, type=int, )
+    ('--initializer', default='uniform', type=str,)
+    ('--prompt_key', default=True, type=bool,)
+    ('--prompt_key_init', default='uniform', type=str)
+    ('--use_prompt_mask', default=True, type=bool)
+    ('--mask_first_epoch', default=False, type=bool)
+    ('--shared_prompt_pool', default=True, type=bool)
+    ('--shared_prompt_key', default=False, type=bool)
+    ('--batchwise_prompt', default=True, type=bool)
+    ('--embedding_key', default='cls', type=str)
+    ('--predefined_key', default='', type=str)
+    ('--pull_constraint', default=True)
+    ('--pull_constraint_coeff', default=1.0, type=float)
+    ('--same_key_value', default=False, type=bool)
+
+
+main(main.py) -> train_and_evaluate(engine.py)-> train_one_epoch(engine.py)->
+
+
+* * * * * * * * * * * * * *25/4/2023
+Stochastic Depth aims to shrink the depth of a network during training, while keeping it unchanged during testing. This is achieved by randomly dropping entire ResBlocks 
+during training and bypassing their transformations through skip connections
+
+nn.Identity: https://stackoverflow.com/questions/64229717/what-is-the-idea-behind-using-nn-identity-for-residual-learning
+
+done attention.py

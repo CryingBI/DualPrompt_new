@@ -410,6 +410,7 @@ class VisionTransformer(nn.Module):
             self.g_prompt_layer_idx = []
 
         if use_g_prompt and g_prompt_length is not None and len(g_prompt_layer_idx) != 0:
+            #use_prefix_tune_for_g_prompt = True
             if not use_prefix_tune_for_g_prompt:
                 g_prompt_shape=(num_g_prompt, g_prompt_length, embed_dim)
                 if prompt_init == 'zero':
@@ -418,6 +419,7 @@ class VisionTransformer(nn.Module):
                     self.g_prompt = nn.Parameter(torch.randn(g_prompt_shape))
                     nn.init.uniform_(self.g_prompt, -1, 1)
             else:
+                #same_key_value = False
                 if same_key_value:
                     g_prompt_shape=(num_g_prompt, 1, g_prompt_length, num_heads, embed_dim // num_heads)
                     if prompt_init == 'zero':

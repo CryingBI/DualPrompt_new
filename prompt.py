@@ -24,6 +24,7 @@ class EPrompt(nn.Module):
             # user prefix style
             if self.use_prefix_tune_for_e_prompt:
                 assert embed_dim % self.num_heads == 0
+                #
                 if self.same_key_value:
                     prompt_pool_shape = (self.num_layers, 1, self.pool_size, self.length, 
                                         self.num_heads, embed_dim // self.num_heads)
@@ -34,6 +35,7 @@ class EPrompt(nn.Module):
                         self.prompt = nn.Parameter(torch.randn(prompt_pool_shape))
                         nn.init.uniform_(self.prompt, -1, 1)
                     self.prompt = self.prompt.repeat(1, 2, 1, 1, 1, 1)
+                #
                 else:
                     prompt_pool_shape = (self.num_layers, 2, self.pool_size, self.length, 
                                         self.num_heads, embed_dim // self.num_heads)
