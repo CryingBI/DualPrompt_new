@@ -13,7 +13,7 @@ class promptGe(nn.Module):
 
         #Generation network
         self.generation_layer_1 = nn.Linear(768, 256, bias=True)
-        self.generation_activation = nn.Relu()
+        self.generation_activation = nn.ReLU()
         self.generation_layer_2 = nn.Linear(256, 768*5, bias=True)
 
     def forward(self, x_embed, task_id=None):
