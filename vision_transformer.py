@@ -41,6 +41,7 @@ from timm.models.layers import PatchEmbed, Mlp, DropPath, trunc_normal_, lecun_n
 from timm.models.registry import register_model
 
 from prompt import EPrompt
+from GePrompt import promptGe
 from attention import PreT_Attention
 
 _logger = logging.getLogger(__name__)
@@ -520,6 +521,12 @@ class VisionTransformer(nn.Module):
     def forward_features(self, x, task_id=-1, cls_features=None, train=False):
         x = self.patch_embed(x)
 
+        #add genertor prompt
+        self.generator_prompt = promptGe(length=1, embed_dim=768)
+
+        res_ge = self.generator_prompt(x, task_id)
+        x = res_ge['prompted_embedding']
+        
         if self.cls_token is not None:
             x = torch.cat((self.cls_token.expand(x.shape[0], -1, -1), x), dim=1)
         
