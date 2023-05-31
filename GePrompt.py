@@ -20,8 +20,8 @@ class promptGe(nn.Module):
         out = dict()
 
         task_embed = torch.Tensor([task_id])
-        m = task_embed.expand(x_embed.shape[0], -1)
-        n = self.task_embed_layer(m).long()
+        m = task_embed.expand(x_embed.shape[0], -1).long()
+        n = self.task_embed_layer(m)
 
         x_task_embed = torch.cat((x_embed, n), dim=1)
         a = self.generation_layer_1(x_task_embed)
