@@ -518,12 +518,13 @@ class VisionTransformer(nn.Module):
             self.global_pool = global_pool
         self.head = nn.Linear(self.embed_dim, num_classes) if num_classes > 0 else nn.Identity()
 
+    #change task_id from -1 to 0
     def forward_features(self, x, task_id=-1, cls_features=None, train=False):
         x = self.patch_embed(x)
 
         #add genertor prompt
         self.generator_prompt = promptGe(length=1, embed_dim=768)
-
+        print("task_id", task_id)
         res_ge = self.generator_prompt(x, task_id)
         x = res_ge['prompted_embedding']
         
