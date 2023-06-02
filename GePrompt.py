@@ -33,7 +33,7 @@ class promptGe(nn.Module):
         a = self.generation_layer_1(x_task_embed_mean)
         b = self.generation_activation(a)
         batched_prompt_raw = self.generation_layer_2(b)     # B, 1, C * 5
-        batched_prompt_raw = batched_prompt_raw.reshape((16, 5, 768))
+        batched_prompt_raw = batched_prompt_raw.reshape((x_embed.shape[0], 5, 768))
 
         out['total_prompt_len'] = 5
         out['prompted_embedding'] = torch.cat([batched_prompt_raw, x_embed], dim=1)
