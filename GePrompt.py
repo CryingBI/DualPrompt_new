@@ -13,8 +13,11 @@ class promptGe(nn.Module):
         self.task_embed_layer.cuda()
         #Generation network
         self.generation_layer_1 = nn.Linear(768, 256, bias=True)
+        self.generation_layer_1.cuda()
         self.generation_activation = nn.ReLU()
+        self.generation_activation.cuda()
         self.generation_layer_2 = nn.Linear(256, 768*5, bias=True)
+        self.generation_layer_2.cuda()
 
     def forward(self, x_embed, task_id=None):
         out = dict()
