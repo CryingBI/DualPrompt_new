@@ -20,11 +20,11 @@ class promptGe(nn.Module):
         cuda = torch.device('cuda')
         out = dict()
 
-        task_embed = torch.Tensor([task_id])
+        task_embed = torch.Tensor([task_id]).to(x_embed.device)
         m = task_embed.expand(x_embed.shape[0], -1).long()   
         n = self.task_embed_layer(m)
 
-        x_task_embed = torch.cat((x_embed, n), dim=1).to(device=cuda)
+        x_task_embed = torch.cat((x_embed, n), dim=1).to(x_embed.device)
         a = self.generation_layer_1(x_task_embed)
         b = self.generation_activation(a)
         batched_prompt_raw = self.generation_layer_2(b)     # B, length, C * 5
