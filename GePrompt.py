@@ -10,7 +10,7 @@ class promptGe(nn.Module):
         self.embed_dim = embed_dim
     
         self.task_embed_layer = nn.Embedding(10, self.embed_dim)
-
+        self.task_embed_layer.cuda()
         #Generation network
         self.generation_layer_1 = nn.Linear(768, 256, bias=True)
         self.generation_activation = nn.ReLU()
@@ -20,13 +20,13 @@ class promptGe(nn.Module):
         out = dict()
 
         task_embed = torch.Tensor([task_id]).to(x_embed.device)
-        m = task_embed.expand(x_embed.shape[0], -1).long().to(x_embed.device)
+        m = task_embed.expand(x_embed.shape[0], -1).long()
         n = self.task_embed_layer(m).to(x_embed.device)
 
-        x_task_embed = torch.cat((x_embed, n), dim=1).to(x_embed.device)
-        a = self.generation_layer_1(x_task_embed).to(x_embed.device)
-        b = self.generation_activation(a).to(x_embed.device)
-        batched_prompt_raw = self.generation_layer_2(b).to(x_embed.device)     # B, length, C * 5
+        x_task_embed = torch.cat((x_embed, n), dim=1)
+        a = self.generation_layer_1(x_task_embed)
+        b = self.generation_activation(a)
+        batched_prompt_raw = self.generation_layer_2(b)     # B, length, C * 5
 
         # prompt_1 = batched_prompt_raw[:, :, :768]
         # prompt_2 = batched_prompt_raw[:, :, 768:768*2]
