@@ -524,7 +524,7 @@ class VisionTransformer(nn.Module):
         if task_id >= 0:
             #add genertor prompt
             self.generator_prompt = promptGe(length=1, embed_dim=768)
-            print("task_id", task_id)
+            #print("task_id", task_id)
             res_ge = self.generator_prompt(x, task_id)
             x = res_ge['prompted_embedding']
         
