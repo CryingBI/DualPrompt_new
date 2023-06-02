@@ -387,7 +387,8 @@ class VisionTransformer(nn.Module):
 
         self.cls_token = nn.Parameter(torch.zeros(1, 1, embed_dim)) if class_token else None
         embed_len = num_patches if no_embed_class else num_patches + self.num_prefix_tokens
-        self.pos_embed = nn.Parameter(torch.randn(1, embed_len + 5, embed_dim) * .02)
+        self.pos_embed = nn.Parameter(torch.randn(1, embed_len, embed_dim) * .02)
+        self.pos_embed_for_GeP = nn.Parameter(torch.randn(1, embed_len + 5, embed_dim) * .02)
         self.pos_drop = nn.Dropout(p=drop_rate)
 
         self.prompt_pool = prompt_pool
@@ -518,7 +519,6 @@ class VisionTransformer(nn.Module):
             self.global_pool = global_pool
         self.head = nn.Linear(self.embed_dim, num_classes) if num_classes > 0 else nn.Identity()
 
-    #change task_id from -1 to 0
     def forward_features(self, x, task_id=-1, cls_features=None, train=False):
         x = self.patch_embed(x)
         if task_id >= 0:
@@ -531,8 +531,10 @@ class VisionTransformer(nn.Module):
         if self.cls_token is not None:
             x = torch.cat((self.cls_token.expand(x.shape[0], -1, -1), x), dim=1)
         
-        x = self.pos_drop(x + self.pos_embed)
-
+        if task_id == -1:
+            x = self.pos_drop(x + self.pos_embed)
+        else:
+            x = self.pos_drop(x + self.pos_embed_for_GeP)
         if self.grad_checkpointing and not torch.jit.is_scripting():
             x = checkpoint_seq(self.blocks, x)
         else:
