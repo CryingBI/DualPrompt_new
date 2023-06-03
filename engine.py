@@ -110,7 +110,7 @@ def evaluate(model: torch.nn.Module, original_model: torch.nn.Module, data_loade
             # compute output
 
             if original_model is not None:
-                output = original_model(input)
+                output = original_model(input, task_id=task_id)
                 cls_features = output['pre_logits']
             else:
                 cls_features = None
