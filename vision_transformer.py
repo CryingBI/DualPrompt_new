@@ -521,20 +521,22 @@ class VisionTransformer(nn.Module):
 
     def forward_features(self, x, task_id=-1, cls_features=None, train=False):
         x = self.patch_embed(x)
-        if task_id >= 0:
-            #add genertor prompt
-            self.generator_prompt = promptGe(length=1, embed_dim=768)
-            #print("task_id", task_id)
-            res_ge = self.generator_prompt(x, task_id)
-            x = res_ge['prompted_embedding']
+
+        # if task_id >= 0:
+        #     #add genertor prompt
+        #     self.generator_prompt = promptGe(length=1, embed_dim=768)
+        #     #print("task_id", task_id)
+        #     res_ge = self.generator_prompt(x, task_id)
+        #     x = res_ge['prompted_embedding']
         
         if self.cls_token is not None:
             x = torch.cat((self.cls_token.expand(x.shape[0], -1, -1), x), dim=1)
         
-        if task_id == -1:
-            x = self.pos_drop(x + self.pos_embed)
-        else:
-            x = self.pos_drop(x + self.pos_embed_for_GeP)
+        # if task_id == -1:
+        #     x = self.pos_drop(x + self.pos_embed)
+        # else:
+        x = self.pos_drop(x + self.pos_embed)
+
         if self.grad_checkpointing and not torch.jit.is_scripting():
             x = checkpoint_seq(self.blocks, x)
         else:

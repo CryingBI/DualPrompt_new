@@ -23,7 +23,9 @@ import numpy as np
 
 from timm.utils import accuracy
 from timm.optim import create_optimizer
+from sklearn.mixture import GaussianMixture
 
+from head_model import TaskClassifier
 import utils
 
 def train_one_epoch(model: torch.nn.Module, original_model: torch.nn.Module, 
@@ -48,7 +50,7 @@ def train_one_epoch(model: torch.nn.Module, original_model: torch.nn.Module,
 
         with torch.no_grad():
             if original_model is not None:
-                output = original_model(input, task_id=task_id)
+                output = original_model(input)
                 cls_features = output['pre_logits']
             else:
                 cls_features = None
@@ -110,7 +112,7 @@ def evaluate(model: torch.nn.Module, original_model: torch.nn.Module, data_loade
             # compute output
 
             if original_model is not None:
-                output = original_model(input, task_id=task_id)
+                output = original_model(input)
                 cls_features = output['pre_logits']
             else:
                 cls_features = None
@@ -261,3 +263,51 @@ def train_and_evaluate(model: torch.nn.Module, model_without_ddp: torch.nn.Modul
         if args.output_dir and utils.is_main_process():
             with open(os.path.join(args.output_dir, '{}_stats.txt'.format(datetime.datetime.now().strftime('log_%Y_%m_%d_%H_%M'))), 'a') as f:
                 f.write(json.dumps(log_stats) + '\n')
+
+
+
+
+def train_task_model(args, task_model, original_model, data_loader, task_id=-1):
+    metric_logger = utils.MetricLogger(delimiter="  ")
+
+    header = 'Train_task_model: [Task {}]'.format(task_id + 1)
+
+    task_model.train()
+    original_model.val()
+    
+    gm = sample_data(original_model, data_loader, task_id, args)
+    
+
+    pass
+
+def train_simple_model():
+    pass
+
+
+@torch.no_grad()
+def sample_data(original_model: torch.nn.Module, data_loader, 
+    task_id=-1, args=None):
+    
+    metric_logger = utils.MetricLogger(delimiter="  ")
+
+    header = 'Sample: [Task {}]'.format(task_id + 1)
+
+    x_encoded = []
+
+    original_model.eval()
+    with torch.no_grad():
+        for input, target in metric_logger.log_every(data_loader, args.print_freq, header):
+            input = input.to(device, non_blocking=True)
+            #target = target.to(device, non_blocking=True)
+
+            output = original_model.forward_features(input)
+            x_embed_encode = output['x']
+            x_encoded.append(x_embed_encode)
+
+        x_encoded = torch.cat(x_encoded, dim=0)
+        gm = GaussianMixture(n_components=5, random_state=0).fit(x_encoded.cpu().detach().numpy())
+
+    return gm
+
+
+
