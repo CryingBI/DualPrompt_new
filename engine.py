@@ -18,15 +18,17 @@ from typing import Iterable
 from pathlib import Path
 
 import torch
-
+import torch.nn as nn
 import numpy as np
 
 from timm.utils import accuracy
 from timm.optim import create_optimizer
 from sklearn.mixture import GaussianMixture
+from torch.utils.data import DataLoader, TensorDataset
 
-from head_model import TaskClassifier
 import utils
+
+
 
 def train_one_epoch(model: torch.nn.Module, original_model: torch.nn.Module, 
                     criterion, data_loader: Iterable, optimizer: torch.optim.Optimizer,
@@ -265,27 +267,103 @@ def train_and_evaluate(model: torch.nn.Module, model_without_ddp: torch.nn.Modul
                 f.write(json.dumps(log_stats) + '\n')
 
 
-
-
-def train_task_model(args, task_model, original_model, data_loader, task_id=-1):
-    metric_logger = utils.MetricLogger(delimiter="  ")
-
-    header = 'Train_task_model: [Task {}]'.format(task_id + 1)
-
+def train_task_model(task_model: torch.nn.Module, original_model: torch.nn.Module,
+                    criterion, data_loader: Iterable, optimizer: torch.optim.Optimizer,
+                    device: torch.device, epoch: int, gm_list, max_norm: float = 0,
+                    set_training_mode=True, task_id=-1, class_mask=None, args = None,):
+    
     task_model.train()
-    original_model.val()
-    
-    gm = sample_data(original_model, data_loader, task_id, args)
-    
 
+    loss_fn = nn.CrossEntropyLoss()
+    optimizer = torch.optim.SGD(task_model.parameters(), lr=1e-3)
+
+    metric_logger = utils.MetricLogger(delimiter="  ")
+    metric_logger.add_meter('Lr', utils.SmoothedValue(window_size=1, fmt='{value:.6f}'))
+    metric_logger.add_meter('Loss', utils.SmoothedValue(window_size=1, fmt='{value:.4f}'))
+    header = 'Train_task_model: [Task {}]'.format(task_id + 1)
+    
+    gm = gm_list[:task_id]
+    input, target = gm.sample(n_samples=1024*(task_id + 1))
+    input = torch.from_numpy(input).float()
+    target = torch.from_numpy(target).long()
+
+    train_dataset = TensorDataset(input, target)
+    train_dataloader = DataLoader(train_dataset, batch_size=24)
+
+    for batch, (input, target) in enumerate(train_dataloader):
+        input, target = input.to(device), target.to(device)
+
+        pred = task_model(input)
+        loss = loss_fn(pred, target)
+
+        loss.backward()
+        optimizer.step()
+        optimizer.zero_grad()
+
+        if batch % 10 == 0:
+            loss, current = loss.item(), (batch + 1) * len(input)
+            print(f"loss: {loss:>7f} {current:>5d}")
     pass
 
-def train_simple_model():
-    pass
+def train_simple_model(model: torch.nn.Module, 
+                    criterion, data_loader: Iterable, optimizer: torch.optim.Optimizer,
+                    device: torch.device, epoch: int, max_norm: float = 0,
+                    set_training_mode=True, task_id=-1, class_mask=None, args = None,):
+    
+    model.train(set_training_mode)
+
+    if args.distributed and utils.get_world_size() > 1:
+        data_loader.sampler.set_epoch(epoch)
+
+    metric_logger = utils.MetricLogger(delimiter="  ")
+    metric_logger.add_meter('Lr', utils.SmoothedValue(window_size=1, fmt='{value:.6f}'))
+    metric_logger.add_meter('Loss', utils.SmoothedValue(window_size=1, fmt='{value:.4f}'))
+    header = f'Train: Epoch[{epoch+1:{int(math.log10(args.epochs))+1}}/{args.epochs}]'
+
+    for input, target in metric_logger.log_every(data_loader, args.print_freq, header):
+        input = input.to(device, non_blocking=True)
+        target = target.to(device, non_blocking=True)
+
+        output = model(input, task_id=task_id, train=set_training_mode)
+        logits = output['logits']
+
+        # here is the trick to mask out classes of non-current tasks
+        if args.train_mask and class_mask is not None:
+            mask = class_mask[task_id]
+            not_mask = np.setdiff1d(np.arange(args.nb_classes), mask)
+            not_mask = torch.tensor(not_mask, dtype=torch.int64).to(device)
+            logits = logits.index_fill(dim=1, index=not_mask, value=float('-inf'))
+
+        loss = criterion(logits, target) # base criterion (CrossEntropyLoss)
+        # if args.pull_constraint and 'reduce_sim' in output:
+        #     loss = loss - args.pull_constraint_coeff * output['reduce_sim']
+
+        acc1, acc5 = accuracy(logits, target, topk=(1, 5))
+
+        if not math.isfinite(loss.item()):
+            print("Loss is {}, stopping training".format(loss.item()))
+            sys.exit(1)
+
+        optimizer.zero_grad()
+        loss.backward() 
+        torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm)
+        optimizer.step()
+
+        torch.cuda.synchronize()
+        metric_logger.update(Loss=loss.item())
+        metric_logger.update(Lr=optimizer.param_groups[0]["lr"])
+        metric_logger.meters['Acc@1'].update(acc1.item(), n=input.shape[0])
+        metric_logger.meters['Acc@5'].update(acc5.item(), n=input.shape[0])
+        
+    # gather the stats from all processes
+    metric_logger.synchronize_between_processes()
+    print("Averaged stats:", metric_logger)
+    return {k: meter.global_avg for k, meter in metric_logger.meters.items()}
 
 
+gm_list = []
 @torch.no_grad()
-def sample_data(original_model: torch.nn.Module, data_loader, 
+def sample_data(original_model: torch.nn.Module, data_loader, device,
     task_id=-1, args=None):
     
     metric_logger = utils.MetricLogger(delimiter="  ")
@@ -300,14 +378,13 @@ def sample_data(original_model: torch.nn.Module, data_loader,
             input = input.to(device, non_blocking=True)
             #target = target.to(device, non_blocking=True)
 
-            output = original_model.forward_features(input)
+            output = original_model.forward_features(input, task_id)
             x_embed_encode = output['x']
             x_encoded.append(x_embed_encode)
 
         x_encoded = torch.cat(x_encoded, dim=0)
         gm = GaussianMixture(n_components=5, random_state=0).fit(x_encoded.cpu().detach().numpy())
-
-    return gm
+        gm_list.append(gm)
 
 
 

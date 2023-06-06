@@ -24,6 +24,7 @@ from timm.optim import create_optimizer
 from datasets import build_continual_dataloader
 from engine import *
 import models
+from head_model import TaskClassifier
 import utils
 
 import warnings
@@ -82,8 +83,11 @@ def main(args):
         use_prefix_tune_for_e_prompt=args.use_prefix_tune_for_e_prompt,
         same_key_value=args.same_key_value,
     )
+
+    task_model = TaskClassifier(args)
     original_model.to(device)
-    model.to(device)  
+    model.to(device)
+    task_model.to(device)  
 
     if args.freeze:
         # all parameters are frozen for original vit model
