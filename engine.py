@@ -267,27 +267,30 @@ def train_and_evaluate(model: torch.nn.Module, model_without_ddp: torch.nn.Modul
                 f.write(json.dumps(log_stats) + '\n')
 
 
-def train_task_model(task_model: torch.nn.Module, original_model: torch.nn.Module,
-                    criterion, data_loader: Iterable, optimizer: torch.optim.Optimizer,
-                    device: torch.device, epoch: int, gm_list, max_norm: float = 0,
-                    set_training_mode=True, task_id=-1, class_mask=None, args = None,):
+def train_task_model(task_model: torch.nn.Module, device, gm_list, task_id=-1,):
     
     task_model.train()
 
     loss_fn = nn.CrossEntropyLoss()
     optimizer = torch.optim.SGD(task_model.parameters(), lr=1e-3)
 
-    metric_logger = utils.MetricLogger(delimiter="  ")
-    metric_logger.add_meter('Lr', utils.SmoothedValue(window_size=1, fmt='{value:.6f}'))
-    metric_logger.add_meter('Loss', utils.SmoothedValue(window_size=1, fmt='{value:.4f}'))
-    header = 'Train_task_model: [Task {}]'.format(task_id + 1)
+    # metric_logger = utils.MetricLogger(delimiter="  ")
+    # metric_logger.add_meter('Lr', utils.SmoothedValue(window_size=1, fmt='{value:.6f}'))
+    # metric_logger.add_meter('Loss', utils.SmoothedValue(window_size=1, fmt='{value:.4f}'))
+    # header = 'Train_task_model: [Task {}]'.format(task_id + 1)
     
-    gm = gm_list[:task_id]
-    input, target = gm.sample(n_samples=1024*(task_id + 1))
-    input = torch.from_numpy(input).float()
-    target = torch.from_numpy(target).long()
+    gm_use = gm_list[:task_id]
+    input_train = []
+    target_train = []
+    for gm in gm_use:
+        input, target = gm.sample(n_samples=1024)
+        input = torch.from_numpy(input).float()
+        target = torch.from_numpy(target).long()
 
-    train_dataset = TensorDataset(input, target)
+    input_train = torch.cat(input_train, dim=0)
+    target_train = torch.cat(target_train, dim=0)
+
+    train_dataset = TensorDataset(input_train, target_train)
     train_dataloader = DataLoader(train_dataset, batch_size=24)
 
     for batch, (input, target) in enumerate(train_dataloader):
@@ -300,10 +303,10 @@ def train_task_model(task_model: torch.nn.Module, original_model: torch.nn.Modul
         optimizer.step()
         optimizer.zero_grad()
 
-        if batch % 10 == 0:
+        if batch % 20 == 0:
             loss, current = loss.item(), (batch + 1) * len(input)
-            print(f"loss: {loss:>7f} {current:>5d}")
-    pass
+            print(f"Train_task_model: [Task {task_id + 1}] with loss: {loss:>7f} {current:>5d}")
+    
 
 def train_simple_model(model: torch.nn.Module, 
                     criterion, data_loader: Iterable, optimizer: torch.optim.Optimizer,
@@ -386,5 +389,65 @@ def sample_data(original_model: torch.nn.Module, data_loader, device,
         gm = GaussianMixture(n_components=5, random_state=0).fit(x_encoded.cpu().detach().numpy())
         gm_list.append(gm)
 
+
+def train_and_evaluate_new(model: torch.nn.Module, model_without_ddp: torch.nn.Module, original_model: torch.nn.Module, 
+                    criterion, data_loader: Iterable, optimizer: torch.optim.Optimizer, lr_scheduler, device: torch.device, 
+                    class_mask=None, args = None,):
+    
+    # create matrix to save end-of-task accuracies 
+    acc_matrix = np.zeros((args.num_tasks, args.num_tasks))
+
+    for task_id in range(args.num_tasks):
+        # Transfer previous learned prompt params to the new prompt
+        if args.prompt_pool and args.shared_prompt_pool:
+            if task_id > 0:
+                prev_start = (task_id - 1) * args.top_k
+                prev_end = task_id * args.top_k
+
+                cur_start = prev_end
+                cur_end = (task_id + 1) * args.top_k
+
+                if (prev_end > args.size) or (cur_end > args.size):
+                    pass
+                else:
+                    cur_idx = (slice(None), slice(None), slice(cur_start, cur_end)) if args.use_prefix_tune_for_e_prompt else (slice(None), slice(cur_start, cur_end))
+                    prev_idx = (slice(None), slice(None), slice(prev_start, prev_end)) if args.use_prefix_tune_for_e_prompt else (slice(None), slice(prev_start, prev_end))
+
+                    with torch.no_grad():
+                        if args.distributed:
+                            model.module.e_prompt.prompt.grad.zero_()
+                            model.module.e_prompt.prompt[cur_idx] = model.module.e_prompt.prompt[prev_idx]
+                            optimizer.param_groups[0]['params'] = model.module.parameters()
+                        else:
+                            model.e_prompt.prompt.grad.zero_()
+                            model.e_prompt.prompt[cur_idx] = model.e_prompt.prompt[prev_idx]
+                            optimizer.param_groups[0]['params'] = model.parameters()
+                    
+        # Transfer previous learned prompt param keys to the new prompt
+        if args.prompt_pool and args.shared_prompt_key:
+            if task_id > 0:
+                prev_start = (task_id - 1) * args.top_k
+                prev_end = task_id * args.top_k
+
+                cur_start = prev_end
+                cur_end = (task_id + 1) * args.top_k
+
+                with torch.no_grad():
+                    if args.distributed:
+                        model.module.e_prompt.prompt_key.grad.zero_()
+                        model.module.e_prompt.prompt_key[cur_idx] = model.module.e_prompt.prompt_key[prev_idx]
+                        optimizer.param_groups[0]['params'] = model.module.parameters()
+                    else:
+                        model.e_prompt.prompt_key.grad.zero_()
+                        model.e_prompt.prompt_key[cur_idx] = model.e_prompt.prompt_key[prev_idx]
+                        optimizer.param_groups[0]['params'] = model.parameters()
+     
+        # Create new optimizer for each task to clear optimizer status
+        if task_id > 0 and args.reinit_optimizer:
+            optimizer = create_optimizer(args, model)
+        for epoch in range(args.epochs):
+            train_stat = 
+        
+        
 
 
