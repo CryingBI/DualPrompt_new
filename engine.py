@@ -479,7 +479,7 @@ def train_and_evaluate_new(model: torch.nn.Module, task_model,
         if task_id > 0 and args.reinit_optimizer:
             optimizer = create_optimizer(args, model)
         
-        sample_data = sample_data(model=model, data_loader=[task_id]['train'], device=device, task_id=task_id, args=args)
+        sample_data(model=model, data_loader=[task_id]['train'], device=device, task_id=task_id, args=args)
 
         for epoch in range(args.epochs):
             
