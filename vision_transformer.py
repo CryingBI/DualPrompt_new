@@ -553,15 +553,15 @@ class VisionTransformer(nn.Module):
             x = checkpoint_seq(self.blocks, x)
         else:
             if self.use_g_prompt or self.use_e_prompt:
-                if self.use_prompt_mask and train:
-                    start = task_id * self.e_prompt.top_k
-                    end = (task_id + 1) * self.e_prompt.top_k
-                    single_prompt_mask = torch.arange(start, end).to(x.device)
-                    prompt_mask = single_prompt_mask.unsqueeze(0).expand(x.shape[0], -1)
-                    if end > self.e_prompt.pool_size:
-                        prompt_mask = None
-                else:
-                    prompt_mask = None
+                # if self.use_prompt_mask and train:
+                #     start = task_id * self.e_prompt.top_k
+                #     end = (task_id + 1) * self.e_prompt.top_k
+                #     single_prompt_mask = torch.arange(start, end).to(x.device)
+                #     prompt_mask = single_prompt_mask.unsqueeze(0).expand(x.shape[0], -1)
+                #     if end > self.e_prompt.pool_size:
+                #         prompt_mask = None
+                # else:
+                #     prompt_mask = None
                 
                 g_prompt_counter = -1
                 e_prompt_counter = -1
