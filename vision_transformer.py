@@ -450,10 +450,10 @@ class VisionTransformer(nn.Module):
             e_prompt_shape=(num_e_prompt, 2, 5, num_heads, embed_dim // num_heads)
             for _ in range(10):
                 if prompt_init == 'zero':
-                    self.e_prompt = nn.Parameter(torch.zeros(e_prompt_shape))
+                    self.e_prompt = nn.Parameter(torch.zeros(e_prompt_shape)).to("cuda:0")
                     self.e_prompt_all_task.append(self.e_prompt)
                 elif prompt_init == 'uniform':
-                    self.e_prompt = nn.Parameter(torch.randn(e_prompt_shape))
+                    self.e_prompt = nn.Parameter(torch.randn(e_prompt_shape)).to("cuda:0")
                     nn.init.uniform_(self.e_prompt, -1, 1)
                     self.e_prompt_all_task.append(self.e_prompt)
             #self.e_prompt_all_task = torch.cat(self.e_prompt_all_task, dim = 0).to("cuda:0")
