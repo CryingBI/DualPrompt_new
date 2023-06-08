@@ -25,6 +25,7 @@ from timm.utils import accuracy
 from timm.optim import create_optimizer
 from sklearn.mixture import GaussianMixture
 from torch.utils.data import DataLoader, TensorDataset
+import torch.nn.functional as F
 
 import utils
 
@@ -390,7 +391,79 @@ def sample_data(original_model: torch.nn.Module, data_loader, device,
         gm_list.append(gm)
 
 
-def train_and_evaluate_new(model: torch.nn.Module, model_without_ddp: torch.nn.Module, original_model: torch.nn.Module, 
+@torch.no_grad()
+def evaluate_new(model: torch.nn.Module, task_model: torch.nn.Module, data_loader, 
+            device, task_id=-1, class_mask=None, args=None,):
+    
+    criterion = torch.nn.CrossEntropyLoss()
+
+    metric_logger = utils.MetricLogger(delimiter="  ")
+    header = 'Test: [Task {}]'.format(task_id + 1)
+
+    # switch to evaluation mode
+    model.eval()
+    task_model.eval()
+
+    with torch.no_grad():
+        for input, target in metric_logger.log_every(data_loader, args.print_freq, header):
+            input = input.to(device, non_blocking=True)
+            target = target.to(device, non_blocking=True)
+
+            # compute output
+
+            output = model.forward_features(input, task_id)
+            logits = task_id(output)
+            prob = F.softmax(logits, dim = 1)
+            task_id_infer = torch.argmax(prob)
+            last_logits = model(input, task_id_infer)
+
+            loss = criterion(last_logits, target)
+
+            acc1, acc5 = accuracy(last_logits, target, topk=(1, 5))
+
+            metric_logger.meters['Loss'].update(loss.item())
+            metric_logger.meters['Acc@1'].update(acc1.item(), n=input.shape[0])
+            metric_logger.meters['Acc@5'].update(acc5.item(), n=input.shape[0])
+
+    # gather the stats from all processes
+    metric_logger.synchronize_between_processes()
+    print('* Acc@1 {top1.global_avg:.3f} Acc@5 {top5.global_avg:.3f} loss {losses.global_avg:.3f}'
+          .format(top1=metric_logger.meters['Acc@1'], top5=metric_logger.meters['Acc@5'], losses=metric_logger.meters['Loss']))
+
+    return {k: meter.global_avg for k, meter in metric_logger.meters.items()}
+
+    pass
+
+@torch.no_grad()
+def evaluate_till_now_new(model: torch.nn.Module, task_model: torch.nn.Module, data_loader, 
+            device, task_id=-1, class_mask=None, acc_matrix=None, args=None,):
+    
+    stat_matrix = np.zeros((3, args.num_tasks)) # 3 for Acc@1, Acc@5, Loss
+
+    for i in range(task_id+1):
+        test_stats = evaluate(model=model, task_model=task_model, data_loader=data_loader[i]['val'], 
+                            device=device, task_id=i, class_mask=class_mask, args=args)
+        stat_matrix[0, i] = test_stats['Acc@1']
+        stat_matrix[1, i] = test_stats['Acc@5']
+        stat_matrix[2, i] = test_stats['Loss']
+
+        acc_matrix[i, task_id] = test_stats['Acc@1']
+
+        avg_stat = np.divide(np.sum(stat_matrix, axis=1), task_id+1)
+
+        diagonal = np.diag(acc_matrix)
+
+        result_str = "[Average accuracy till task{}]\tAcc@1: {:.4f}\tAcc@5: {:.4f}\tLoss: {:.4f}".format(task_id+1, avg_stat[0], avg_stat[1], avg_stat[2])
+        if task_id > 0:
+            forgetting = np.mean((np.max(acc_matrix, axis=1) -
+                                acc_matrix[:, task_id])[:task_id])
+            backward = np.mean((acc_matrix[:, task_id] - diagonal)[:task_id])
+
+            result_str += "\tForgetting: {:.4f}\tBackward: {:.4f}".format(forgetting, backward)
+        print(result_str)
+
+        return test_stats
+def train_and_evaluate_new(model: torch.nn.Module, task_model, 
                     criterion, data_loader: Iterable, optimizer: torch.optim.Optimizer, lr_scheduler, device: torch.device, 
                     class_mask=None, args = None,):
     
@@ -446,8 +519,20 @@ def train_and_evaluate_new(model: torch.nn.Module, model_without_ddp: torch.nn.M
         if task_id > 0 and args.reinit_optimizer:
             optimizer = create_optimizer(args, model)
         for epoch in range(args.epochs):
-            train_stat = 
-        
+            train_simple_stat = train_simple_model(model=model, criterion=criterion,
+                                            data_loader=data_loader[task_id]['train'], optimizer=optimizer,
+                                            device=device, epoch=epoch, max_norm = args.clip_grad,
+                                            set_training_mode=True, task_id=task_id, class_mask=class_mask,
+                                            args=args)
+            train_task_stat = train_task_model(task_model=task_model, device=device, gm_list=gm_list, task_id=task_id)
+
+            if lr_scheduler:
+                lr_scheduler.step(epoch)
+        test_stat = None
+
+
+
+
         
 
 
