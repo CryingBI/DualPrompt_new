@@ -457,8 +457,8 @@ class VisionTransformer(nn.Module):
                     self.e_prompt = nn.Parameter(torch.randn(e_prompt_shape))
                     nn.init.uniform_(self.e_prompt, -1, 1)
                     self.e_prompt_all_task.append(self.e_prompt)
-            self.e_prompt_all_task = torch.cat(self.e_prompt_all_task, dim = 0)
-            
+            self.e_prompt_all_task = torch.cat(self.e_prompt_all_task, dim = 0).cuda()
+
         if not (use_g_prompt or use_e_prompt):
             attn_layer = Attention
         elif not (use_prefix_tune_for_g_prompt or use_prefix_tune_for_e_prompt):
