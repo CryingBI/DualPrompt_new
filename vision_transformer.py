@@ -568,7 +568,8 @@ class VisionTransformer(nn.Module):
 
                 # res = self.e_prompt(x, prompt_mask=prompt_mask, cls_features=cls_features)
                 # e_prompt = res['batched_prompt']
-
+                res = dict()
+                
                 for i, block in enumerate(self.blocks):
                     if i in self.g_prompt_layer_idx:
                         if self.use_prefix_tune_for_g_prompt:
