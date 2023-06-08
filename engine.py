@@ -387,6 +387,7 @@ def sample_data(model: torch.nn.Module, data_loader, device,
             x_encoded.append(x_embed_encode)
 
         x_encoded = torch.cat(x_encoded, dim=0)
+        x_encoded = x_encoded.reshape((x_encoded.shape[0], x_encoded.shape[1] * x_encoded.shape[2]))
         gm = GaussianMixture(n_components=5, random_state=0).fit(x_encoded.cpu().detach().numpy())
         gm_list.append(gm)
 
