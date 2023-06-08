@@ -45,15 +45,15 @@ def main(args):
 
     data_loader, class_mask = build_continual_dataloader(args)
 
-    print(f"Creating original model: {args.model}")
-    original_model = create_model(
-        args.model,
-        pretrained=args.pretrained,
-        num_classes=args.nb_classes,
-        drop_rate=args.drop,
-        drop_path_rate=args.drop_path,
-        drop_block_rate=None,
-    )
+    # print(f"Creating original model: {args.model}")
+    # original_model = create_model(
+    #     args.model,
+    #     pretrained=args.pretrained,
+    #     num_classes=args.nb_classes,
+    #     drop_rate=args.drop,
+    #     drop_path_rate=args.drop_path,
+    #     drop_block_rate=None,
+    # )
 
     print(f"Creating model: {args.model}")
     model = create_model(
@@ -83,16 +83,16 @@ def main(args):
         use_prefix_tune_for_e_prompt=args.use_prefix_tune_for_e_prompt,
         same_key_value=args.same_key_value,
     )
-
+    print("Creating task model")
     task_model = TaskClassifier(args)
-    original_model.to(device)
+    # original_model.to(device)
     model.to(device)
     task_model.to(device)  
 
     if args.freeze:
         # all parameters are frozen for original vit model
-        for p in original_model.parameters():
-            p.requires_grad = False
+        # for p in original_model.parameters():
+        #     p.requires_grad = False
         
         # freeze args.freeze[blocks, patch_embed, cls_token] parameters
         for n, p in model.named_parameters():
@@ -113,15 +113,15 @@ def main(args):
             else:
                 print('No checkpoint found at:', checkpoint_path)
                 return
-            _ = evaluate_till_now(model, original_model, data_loader, device, 
+            _ = evaluate_till_now_new(model, task_model, data_loader, device, 
                                             task_id, class_mask, acc_matrix, args,)
         
         return
 
-    model_without_ddp = model
-    if args.distributed:
-        model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[args.gpu])
-        model_without_ddp = model.module
+    # model_without_ddp = model
+    # if args.distributed:
+    #     model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[args.gpu])
+    #     model_without_ddp = model.module
     
     n_parameters = sum(p.numel() for p in model.parameters() if p.requires_grad)
     print('number of params:', n_parameters)
@@ -132,7 +132,7 @@ def main(args):
         global_batch_size = args.batch_size * args.world_size
     args.lr = args.lr * global_batch_size / 256.0
 
-    optimizer = create_optimizer(args, model_without_ddp)
+    optimizer = create_optimizer(args, model)
 
     if args.sched != 'constant':
         lr_scheduler, _ = create_scheduler(args, optimizer)
@@ -144,7 +144,7 @@ def main(args):
     print(f"Start training for {args.epochs} epochs")
     start_time = time.time()
 
-    train_and_evaluate(model, model_without_ddp, original_model,
+    train_and_evaluate_new(model, task_model,
                     criterion, data_loader, optimizer, lr_scheduler,
                     device, class_mask, args)
 
