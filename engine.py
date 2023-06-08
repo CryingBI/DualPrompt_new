@@ -367,7 +367,7 @@ def train_simple_model(model: torch.nn.Module,
 
 gm_list = []
 @torch.no_grad()
-def sample_data(original_model: torch.nn.Module, data_loader, device,
+def sample_data(model: torch.nn.Module, data_loader, device,
     task_id=-1, args=None):
     
     metric_logger = utils.MetricLogger(delimiter="  ")
@@ -376,13 +376,13 @@ def sample_data(original_model: torch.nn.Module, data_loader, device,
 
     x_encoded = []
 
-    original_model.eval()
+    model.eval()
     with torch.no_grad():
         for input, target in metric_logger.log_every(data_loader, args.print_freq, header):
             input = input.to(device, non_blocking=True)
             #target = target.to(device, non_blocking=True)
 
-            output = original_model.forward_features(input, task_id)
+            output = model.forward_features(input, task_id)
             x_embed_encode = output['x']
             x_encoded.append(x_embed_encode)
 
@@ -478,7 +478,11 @@ def train_and_evaluate_new(model: torch.nn.Module, task_model,
         # Create new optimizer for each task to clear optimizer status
         if task_id > 0 and args.reinit_optimizer:
             optimizer = create_optimizer(args, model)
+        
+        sample_data = sample_data(model=model, data_loader=[task_id]['train'], device=device, task_id=task_id, args=args)
+
         for epoch in range(args.epochs):
+            
             train_simple_stat = train_simple_model(model=model, criterion=criterion,
                                             data_loader=data_loader[task_id]['train'], optimizer=optimizer,
                                             device=device, epoch=epoch, max_norm = args.clip_grad,

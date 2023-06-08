@@ -569,7 +569,7 @@ class VisionTransformer(nn.Module):
                 # res = self.e_prompt(x, prompt_mask=prompt_mask, cls_features=cls_features)
                 # e_prompt = res['batched_prompt']
                 res = dict()
-                
+
                 for i, block in enumerate(self.blocks):
                     if i in self.g_prompt_layer_idx:
                         if self.use_prefix_tune_for_g_prompt:
@@ -578,7 +578,7 @@ class VisionTransformer(nn.Module):
                             # Prefix tunning, [B, 2, g_prompt_length, num_heads, embed_dim // num_heads]
                             idx = torch.tensor([g_prompt_counter] * x.shape[0]).to(x.device)
                             g_prompt = self.g_prompt[idx]
-                            print(g_prompt.shape)
+                            #print(g_prompt.shape)
                         else:
                             g_prompt=None
                         x = block(x, prompt=g_prompt)
