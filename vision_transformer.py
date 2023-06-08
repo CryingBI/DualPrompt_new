@@ -572,9 +572,11 @@ class VisionTransformer(nn.Module):
                     if i in self.g_prompt_layer_idx:
                         if self.use_prefix_tune_for_g_prompt:
                             g_prompt_counter += 1
+                            # (num_g_prompt, 2, g_prompt_length, num_heads, embed_dim // num_heads)
                             # Prefix tunning, [B, 2, g_prompt_length, num_heads, embed_dim // num_heads]
                             idx = torch.tensor([g_prompt_counter] * x.shape[0]).to(x.device)
                             g_prompt = self.g_prompt[idx]
+                            print(g_prompt.shape)
                         else:
                             g_prompt=None
                         x = block(x, prompt=g_prompt)
@@ -585,8 +587,10 @@ class VisionTransformer(nn.Module):
                             # Prefix tunning, [B, 2, top_k * e_prompt_length, num_heads, embed_dim // num_heads]
                             idx = torch.tensor([e_prompt_counter] * x.shape[0]).to(x.device)
                             task_id = torch.tensor([task_id]).to(x.device)
+
+                            #[24, 3, 2, 5, 12, 64]
                             e_prompt_new = self.e_prompt[task_id][idx]
-                            print(e_prompt_new.shape) 
+                            
                             x = block(x, prompt=e_prompt_new)
                         
                             # Pommpt tunning, [B, top_k * e_prompt_length, embed_dim]
