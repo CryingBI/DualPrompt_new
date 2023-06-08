@@ -445,16 +445,17 @@ class VisionTransformer(nn.Module):
             #         prompt_pool=prompt_pool, prompt_key=prompt_key, pool_size=pool_size, top_k=top_k, batchwise_prompt=batchwise_prompt,
             #         prompt_key_init=prompt_key_init, num_layers=num_e_prompt, use_prefix_tune_for_e_prompt=use_prefix_tune_for_e_prompt,
             #         num_heads=num_heads, same_key_value=same_key_value)
-
-            e_prompt_shape=(10, num_e_prompt, 2, 5, num_heads, embed_dim // num_heads)
             
-            if prompt_init == 'zero':
-                self.e_prompt = nn.Parameter(torch.zeros(e_prompt_shape))
-                #self.e_prompt_all_task.append(self.e_prompt)
-            elif prompt_init == 'uniform':
-                self.e_prompt = nn.Parameter(torch.randn(e_prompt_shape))
-                nn.init.uniform_(self.e_prompt, -1, 1)
-                #self.e_prompt_all_task.append(self.e_prompt)
+            self.e_prompt_all_task = []
+            e_prompt_shape=(num_e_prompt, 2, 5, num_heads, embed_dim // num_heads)
+            for _ in range(10):
+                if prompt_init == 'zero':
+                    self.e_prompt = nn.Parameter(torch.zeros(e_prompt_shape))
+                    self.e_prompt_all_task.append(self.e_prompt)
+                elif prompt_init == 'uniform':
+                    self.e_prompt = nn.Parameter(torch.randn(e_prompt_shape))
+                    nn.init.uniform_(self.e_prompt, -1, 1)
+                    self.e_prompt_all_task.append(self.e_prompt)
             #self.e_prompt_all_task = torch.cat(self.e_prompt_all_task, dim = 0).to("cuda:0")
 
         if not (use_g_prompt or use_e_prompt):
@@ -587,9 +588,9 @@ class VisionTransformer(nn.Module):
                             # Prefix tunning, [B, 2, top_k * e_prompt_length, num_heads, embed_dim // num_heads]
                             idx = torch.tensor([e_prompt_counter] * x.shape[0]).to(x.device)
                             task_id = torch.tensor([task_id]).to(x.device)
-
+                        
                             #[24, 3, 2, 5, 12, 64]
-                            e_prompt_new = self.e_prompt[task_id][idx]
+                            e_prompt_new = self.e_prompt_all_task[task_id][idx]
                             
                             x = block(x, prompt=e_prompt_new)
                         
