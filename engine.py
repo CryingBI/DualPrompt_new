@@ -412,7 +412,7 @@ def evaluate_new(model: torch.nn.Module, task_model: torch.nn.Module, data_loade
             # compute output
 
             output = model.forward_features(input, task_id)
-            logits = task_id(output)
+            logits = task_id(output['x'])
             prob = F.softmax(logits, dim = 1)
             task_id_infer = torch.argmax(prob)
             last_logits = model(input, task_id_infer)
@@ -441,7 +441,7 @@ def evaluate_till_now_new(model: torch.nn.Module, task_model: torch.nn.Module, d
     stat_matrix = np.zeros((3, args.num_tasks)) # 3 for Acc@1, Acc@5, Loss
 
     for i in range(task_id+1):
-        test_stats = evaluate(model=model, task_model=task_model, data_loader=data_loader[i]['val'], 
+        test_stats = evaluate_new(model=model, task_model=task_model, data_loader=data_loader[i]['val'], 
                             device=device, task_id=i, class_mask=class_mask, args=args)
         stat_matrix[0, i] = test_stats['Acc@1']
         stat_matrix[1, i] = test_stats['Acc@5']
@@ -472,48 +472,8 @@ def train_and_evaluate_new(model: torch.nn.Module, task_model,
 
     for task_id in range(args.num_tasks):
         # Transfer previous learned prompt params to the new prompt
-        if args.prompt_pool and args.shared_prompt_pool:
-            if task_id > 0:
-                prev_start = (task_id - 1) * args.top_k
-                prev_end = task_id * args.top_k
-
-                cur_start = prev_end
-                cur_end = (task_id + 1) * args.top_k
-
-                if (prev_end > args.size) or (cur_end > args.size):
-                    pass
-                else:
-                    cur_idx = (slice(None), slice(None), slice(cur_start, cur_end)) if args.use_prefix_tune_for_e_prompt else (slice(None), slice(cur_start, cur_end))
-                    prev_idx = (slice(None), slice(None), slice(prev_start, prev_end)) if args.use_prefix_tune_for_e_prompt else (slice(None), slice(prev_start, prev_end))
-
-                    with torch.no_grad():
-                        if args.distributed:
-                            model.module.e_prompt.prompt.grad.zero_()
-                            model.module.e_prompt.prompt[cur_idx] = model.module.e_prompt.prompt[prev_idx]
-                            optimizer.param_groups[0]['params'] = model.module.parameters()
-                        else:
-                            model.e_prompt.prompt.grad.zero_()
-                            model.e_prompt.prompt[cur_idx] = model.e_prompt.prompt[prev_idx]
-                            optimizer.param_groups[0]['params'] = model.parameters()
                     
         # Transfer previous learned prompt param keys to the new prompt
-        if args.prompt_pool and args.shared_prompt_key:
-            if task_id > 0:
-                prev_start = (task_id - 1) * args.top_k
-                prev_end = task_id * args.top_k
-
-                cur_start = prev_end
-                cur_end = (task_id + 1) * args.top_k
-
-                with torch.no_grad():
-                    if args.distributed:
-                        model.module.e_prompt.prompt_key.grad.zero_()
-                        model.module.e_prompt.prompt_key[cur_idx] = model.module.e_prompt.prompt_key[prev_idx]
-                        optimizer.param_groups[0]['params'] = model.module.parameters()
-                    else:
-                        model.e_prompt.prompt_key.grad.zero_()
-                        model.e_prompt.prompt_key[cur_idx] = model.e_prompt.prompt_key[prev_idx]
-                        optimizer.param_groups[0]['params'] = model.parameters()
      
         # Create new optimizer for each task to clear optimizer status
         if task_id > 0 and args.reinit_optimizer:
@@ -528,7 +488,31 @@ def train_and_evaluate_new(model: torch.nn.Module, task_model,
 
             if lr_scheduler:
                 lr_scheduler.step(epoch)
-        test_stat = None
+        test_stat = evaluate_till_now_new(model=model, task_model=task_model, data_loader=data_loader, device=device,
+                                        task_id=task_id, class_mask=class_mask, acc_matrix=acc_matrix, args=args,)
+        
+        if args.output_dir and utils.is_main_process():
+            Path(os.path.join(args.output_dir, 'checkpoint')).mkdir(parents=True, exist_ok=True)
+            
+            checkpoint_path = os.path.join(args.output_dir, 'checkpoint/task{}_checkpoint.pth'.format(task_id+1))
+            state_dict = {
+                    'model': model.state_dict(),
+                    'optimizer': optimizer.state_dict(),
+                    'epoch': epoch,
+                    'args': args,
+                }
+            if args.sched is not None and args.sched != 'constant':
+                state_dict['lr_scheduler'] = lr_scheduler.state_dict()
+            
+            utils.save_on_master(state_dict, checkpoint_path)
+
+        log_stats = {**{f'train_{k}': v for k, v in train_simple_stat.items()},
+            **{f'test_{k}': v for k, v in test_stat.items()},
+            'epoch': epoch,}
+
+        if args.output_dir and utils.is_main_process():
+            with open(os.path.join(args.output_dir, '{}_stats.txt'.format(datetime.datetime.now().strftime('log_%Y_%m_%d_%H_%M'))), 'a') as f:
+                f.write(json.dumps(log_stats) + '\n')
 
 
 
