@@ -24,6 +24,7 @@ import numpy as np
 from timm.utils import accuracy
 from timm.optim import create_optimizer
 from sklearn.mixture import GaussianMixture
+from sklearn.decomposition import PCA
 from torch.utils.data import DataLoader, TensorDataset
 import torch.nn.functional as F
 
@@ -388,7 +389,8 @@ def sample_data(model: torch.nn.Module, data_loader, device,
 
         x_encoded = torch.cat(x_encoded, dim=0)
         x_encoded = x_encoded.reshape((x_encoded.shape[0], x_encoded.shape[1] * x_encoded.shape[2]))
-        print(x_encoded.shape)
+        pca = PCA(n_components=1000)
+        x_encoded = pca.fit(x_encoded).transform(x_encoded)
         gm = GaussianMixture(n_components=5, random_state=0).fit(x_encoded.cpu().detach().numpy())
         print("OK")
         gm_list.append(gm)
