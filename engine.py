@@ -386,9 +386,10 @@ def sample_data(model: torch.nn.Module, data_loader, device,
             output = model.forward_features(input, task_id)
             x_embed_encode = output['x']
             x_encoded.append(x_embed_encode)
-
+        random_index = torch.randint(5000, (50,))
         x_encoded = torch.cat(x_encoded, dim=0)
         x_encoded = x_encoded.reshape((x_encoded.shape[0], x_encoded.shape[1] * x_encoded.shape[2]))
+        x_encoded = x_encoded[random_index]
         pca = PCA(n_components=1000)
         x_encoded = pca.fit(x_encoded.cpu().detach().numpy()).transform(x_encoded.cpu().detach().numpy())
         gm = GaussianMixture(n_components=5, random_state=0).fit(x_encoded.cpu().detach().numpy())
