@@ -30,7 +30,7 @@ import torch.nn.functional as F
 
 import utils
 
-gm_list = []
+
 
 def train_one_epoch(model: torch.nn.Module, original_model: torch.nn.Module, 
                     criterion, data_loader: Iterable, optimizer: torch.optim.Optimizer,
@@ -371,7 +371,7 @@ def train_simple_model(model: torch.nn.Module,
 
 
 @torch.no_grad()
-def sample_data(model: torch.nn.Module, data_loader, device,
+def sample_data(model: torch.nn.Module, data_loader, gm_list, device,
     task_id=-1, args=None):
     
     metric_logger = utils.MetricLogger(delimiter="  ")
@@ -474,7 +474,7 @@ def evaluate_till_now_new(model: torch.nn.Module, task_model: torch.nn.Module, d
 
         return test_stats
 def train_and_evaluate_new(model: torch.nn.Module, task_model, 
-                    criterion, data_loader: Iterable, optimizer: torch.optim.Optimizer, lr_scheduler, device: torch.device, 
+                    criterion, data_loader: Iterable, optimizer: torch.optim.Optimizer, lr_scheduler, gm_list, device: torch.device, 
                     class_mask=None, args = None,):
     
     # create matrix to save end-of-task accuracies 
@@ -489,7 +489,7 @@ def train_and_evaluate_new(model: torch.nn.Module, task_model,
         if task_id > 0 and args.reinit_optimizer:
             optimizer = create_optimizer(args, model)
         
-        sample_data(model=model, data_loader=data_loader[task_id]['train'], device=device, task_id=task_id, args=args)
+        sample_data(model=model, data_loader=data_loader[task_id]['train'], gm_list=gm_list, device=device, task_id=task_id, args=args)
 
         for epoch in range(args.epochs):
             

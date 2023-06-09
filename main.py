@@ -89,6 +89,8 @@ def main(args):
     model.to(device)
     task_model.to(device)  
 
+    gm_list = []
+
     if args.freeze:
         # all parameters are frozen for original vit model
         # for p in original_model.parameters():
@@ -145,7 +147,7 @@ def main(args):
     start_time = time.time()
 
     train_and_evaluate_new(model, task_model,
-                    criterion, data_loader, optimizer, lr_scheduler,
+                    criterion, data_loader, optimizer, lr_scheduler, gm_list,
                     device, class_mask, args)
 
     total_time = time.time() - start_time
