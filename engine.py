@@ -288,6 +288,8 @@ def train_task_model(task_model: torch.nn.Module, device, gm_list, task_id=-1,):
         input, target = gm.sample(n_samples=1024)
         input = torch.from_numpy(input).float()
         target = torch.from_numpy(target).long()
+        input_train.append(input)
+        target_train.append(target)
 
     input_train = torch.cat(input_train, dim=0)
     target_train = torch.cat(target_train, dim=0)
