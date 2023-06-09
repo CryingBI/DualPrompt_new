@@ -287,9 +287,9 @@ def train_task_model(task_model: torch.nn.Module, device, gm_list, task_id=-1,):
     for gm in gm_use:
         input, target = gm.sample(n_samples=1024)
         input = torch.from_numpy(input).float()
+        target = torch.from_numpy(target).long()
         print(input.shape)
         print(target.shape)
-        target = torch.from_numpy(target).long()
         input_train.append(input)
         target_train.append(target)
 
@@ -494,11 +494,11 @@ def train_and_evaluate_new(model: torch.nn.Module, task_model,
 
         for epoch in range(args.epochs):
             
-            train_simple_stat = train_simple_model(model=model, criterion=criterion,
-                                            data_loader=data_loader[task_id]['train'], optimizer=optimizer,
-                                            device=device, epoch=epoch, max_norm = args.clip_grad,
-                                            set_training_mode=True, task_id=task_id, class_mask=class_mask,
-                                            args=args)
+            # train_simple_stat = train_simple_model(model=model, criterion=criterion,
+            #                                 data_loader=data_loader[task_id]['train'], optimizer=optimizer,
+            #                                 device=device, epoch=epoch, max_norm = args.clip_grad,
+            #                                 set_training_mode=True, task_id=task_id, class_mask=class_mask,
+            #                                 args=args)
             train_task_stat = train_task_model(task_model=task_model, device=device, gm_list=gm_list, task_id=task_id)
 
             if lr_scheduler:
