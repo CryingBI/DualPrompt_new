@@ -30,7 +30,7 @@ import torch.nn.functional as F
 
 import utils
 
-
+gm_list = []
 
 def train_one_epoch(model: torch.nn.Module, original_model: torch.nn.Module, 
                     criterion, data_loader: Iterable, optimizer: torch.optim.Optimizer,
@@ -282,6 +282,8 @@ def train_task_model(task_model: torch.nn.Module, device, gm_list, task_id=-1,):
     # header = 'Train_task_model: [Task {}]'.format(task_id + 1)
     
     gm_use = gm_list[:task_id]
+    if gm_use != None:
+        print("have")
     input_train = []
     target_train = []
     for gm in gm_use:
@@ -368,7 +370,7 @@ def train_simple_model(model: torch.nn.Module,
     return {k: meter.global_avg for k, meter in metric_logger.meters.items()}
 
 
-gm_list = []
+
 @torch.no_grad()
 def sample_data(model: torch.nn.Module, data_loader, device,
     task_id=-1, args=None):
