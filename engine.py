@@ -282,14 +282,13 @@ def train_task_model(task_model: torch.nn.Module, device, gm_list, task_id=-1,):
     # header = 'Train_task_model: [Task {}]'.format(task_id + 1)
     
     gm_use = gm_list[:task_id]
+    print(gm_use)
     input_train = []
     target_train = []
     for gm in gm_use:
         input, target = gm.sample(n_samples=1024)
         input = torch.from_numpy(input).float()
         target = torch.from_numpy(target).long()
-        print(input.shape)
-        print(target.shape)
         input_train.append(input)
         target_train.append(target)
 
