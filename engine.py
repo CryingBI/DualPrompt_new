@@ -421,6 +421,7 @@ def evaluate_new(model: torch.nn.Module, task_model: torch.nn.Module, data_loade
 
             output = model.forward_features(input, task_id)
             output['x'] = output['x'].mean(dim=1)
+            output['x'] = output['x'].mean(dim=0)
             logits = task_model(output['x'])
             print(f"logits: {logits.shape}")
 
