@@ -432,9 +432,8 @@ def evaluate_new(model: torch.nn.Module, task_model: torch.nn.Module, data_loade
             print(f"task_id_infer: {task_id_infer.shape}")
 
             last_logits = model(input, task_id_infer)
-            print(f"last_logits: {last_logits.shape}")
 
-            loss = criterion(last_logits, target)
+            loss = criterion(last_logits['logits'], target)
 
             acc1, acc5 = accuracy(last_logits, target, topk=(1, 5))
 
