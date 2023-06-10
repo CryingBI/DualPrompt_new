@@ -463,20 +463,20 @@ def evaluate_till_now_new(model: torch.nn.Module, task_model: torch.nn.Module, d
 
         acc_matrix[i, task_id] = test_stats['Acc@1']
 
-        avg_stat = np.divide(np.sum(stat_matrix, axis=1), task_id+1)
+    avg_stat = np.divide(np.sum(stat_matrix, axis=1), task_id+1)
 
-        diagonal = np.diag(acc_matrix)
+    diagonal = np.diag(acc_matrix)
 
-        result_str = "[Average accuracy till task{}]\tAcc@1: {:.4f}\tAcc@5: {:.4f}\tLoss: {:.4f}".format(task_id+1, avg_stat[0], avg_stat[1], avg_stat[2])
-        if task_id > 0:
-            forgetting = np.mean((np.max(acc_matrix, axis=1) -
-                                acc_matrix[:, task_id])[:task_id])
-            backward = np.mean((acc_matrix[:, task_id] - diagonal)[:task_id])
+    result_str = "[Average accuracy till task{}]\tAcc@1: {:.4f}\tAcc@5: {:.4f}\tLoss: {:.4f}".format(task_id+1, avg_stat[0], avg_stat[1], avg_stat[2])
+    if task_id > 0:
+        forgetting = np.mean((np.max(acc_matrix, axis=1) -
+                            acc_matrix[:, task_id])[:task_id])
+        backward = np.mean((acc_matrix[:, task_id] - diagonal)[:task_id])
 
-            result_str += "\tForgetting: {:.4f}\tBackward: {:.4f}".format(forgetting, backward)
-        print(result_str)
+        result_str += "\tForgetting: {:.4f}\tBackward: {:.4f}".format(forgetting, backward)
+    print(result_str)
 
-        return test_stats
+    return test_stats
 def train_and_evaluate_new(model: torch.nn.Module, task_model, 
                     criterion, data_loader: Iterable, optimizer: torch.optim.Optimizer, lr_scheduler, gm_list, device: torch.device, 
                     class_mask=None, args = None,):
