@@ -428,14 +428,13 @@ def evaluate_new(model: torch.nn.Module, task_model: torch.nn.Module, data_loade
             prob = F.softmax(logits)
             print(f"prob: {prob.shape}")
 
-            task_id_infer = torch.argmax(prob)
-            print(f"task_id_infer: {task_id_infer.shape}")
+            task_id_infer = torch.argmax(prob).item()
 
             last_logits = model(input, task_id_infer)
 
             loss = criterion(last_logits['logits'], target)
 
-            acc1, acc5 = accuracy(last_logits, target, topk=(1, 5))
+            acc1, acc5 = accuracy(last_logits['logits'], target, topk=(1, 5))
 
             metric_logger.meters['Loss'].update(loss.item())
             metric_logger.meters['Acc@1'].update(acc1.item(), n=input.shape[0])
