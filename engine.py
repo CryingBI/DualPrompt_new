@@ -282,7 +282,6 @@ def train_task_model(task_model: torch.nn.Module, device, gm_list, task_id=-1,):
     # header = 'Train_task_model: [Task {}]'.format(task_id + 1)
     
     gm_use = gm_list[:(task_id+1)]
-    print(gm_use)
     input_train = []
     target_train = []
     for gm in gm_use:
@@ -397,9 +396,7 @@ def sample_data(model: torch.nn.Module, data_loader, gm_list, device,
         x_encoded = pca.fit(x_encoded.cpu().detach().numpy()).transform(x_encoded.cpu().detach().numpy())
         x_encoded = torch.from_numpy(x_encoded)
         gm = GaussianMixture(n_components=5, random_state=0).fit(x_encoded.cpu().detach().numpy())
-        print("OK")
         gm_list.append(gm)
-        print(len(gm_list))
 
 
 @torch.no_grad()
@@ -423,7 +420,7 @@ def evaluate_new(model: torch.nn.Module, task_model: torch.nn.Module, data_loade
             # compute output
 
             output = model.forward_features(input, task_id)
-            logits = task_id(output['x'])
+            logits = task_model(output['x'])
             prob = F.softmax(logits, dim = 1)
             task_id_infer = torch.argmax(prob)
             last_logits = model(input, task_id_infer)
@@ -443,7 +440,6 @@ def evaluate_new(model: torch.nn.Module, task_model: torch.nn.Module, data_loade
 
     return {k: meter.global_avg for k, meter in metric_logger.meters.items()}
 
-    pass
 
 @torch.no_grad()
 def evaluate_till_now_new(model: torch.nn.Module, task_model: torch.nn.Module, data_loader, 
