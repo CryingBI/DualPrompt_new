@@ -395,7 +395,7 @@ def sample_data(model: torch.nn.Module, data_loader, gm_list, device,
         pca = PCA(n_components=768)
         x_encoded = pca.fit(x_encoded.cpu().detach().numpy()).transform(x_encoded.cpu().detach().numpy())
         x_encoded = torch.from_numpy(x_encoded)
-        gm = GaussianMixture(n_components=5, random_state=0).fit(x_encoded.cpu().detach().numpy())
+        gm = GaussianMixture(n_components=10, random_state=0).fit(x_encoded.cpu().detach().numpy())
         gm_list.append(gm)
 
 
@@ -420,6 +420,7 @@ def evaluate_new(model: torch.nn.Module, task_model: torch.nn.Module, data_loade
             # compute output
 
             output = model.forward_features(input, task_id)
+            output['x'] = output['x'].mean(dim=1)
             logits = task_model(output['x'])
             print(f"logits: {logits.shape}")
 
