@@ -589,7 +589,7 @@ class VisionTransformer(nn.Module):
                             # Prefix tunning, [B, 2, top_k * e_prompt_length, num_heads, embed_dim // num_heads]
                             idx = torch.tensor([e_prompt_counter] * x.shape[0]).to(x.device)
                             task_id = torch.tensor([task_id]).to(x.device)
-                        
+                            print(task_id)
                             #[24, 3, 2, 5, 12, 64]
                             e_prompt_new = self.e_prompt_all_task[task_id][idx]
                             
