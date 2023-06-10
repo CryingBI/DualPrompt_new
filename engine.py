@@ -423,10 +423,10 @@ def evaluate_new(model: torch.nn.Module, task_model: torch.nn.Module, data_loade
             output['x'] = output['x'].mean(dim=1)
             output['x'] = output['x'].mean(dim=0)
             logits = task_model(output['x'])
-            print(f"logits: {logits.shape}")
+            #print(f"logits: {logits.shape}")
 
             prob = F.softmax(logits)
-            print(f"prob: {prob.shape}")
+            #print(f"prob: {prob.shape}")
 
             task_id_infer = torch.argmax(prob).item()
 
@@ -497,11 +497,11 @@ def train_and_evaluate_new(model: torch.nn.Module, task_model,
 
         for epoch in range(args.epochs):
             
-            # train_simple_stat = train_simple_model(model=model, criterion=criterion,
-            #                                 data_loader=data_loader[task_id]['train'], optimizer=optimizer,
-            #                                 device=device, epoch=epoch, max_norm = args.clip_grad,
-            #                                 set_training_mode=True, task_id=task_id, class_mask=class_mask,
-            #                                 args=args)
+            train_simple_stat = train_simple_model(model=model, criterion=criterion,
+                                            data_loader=data_loader[task_id]['train'], optimizer=optimizer,
+                                            device=device, epoch=epoch, max_norm = args.clip_grad,
+                                            set_training_mode=True, task_id=task_id, class_mask=class_mask,
+                                            args=args)
             train_task_stat = train_task_model(task_model=task_model, device=device, gm_list=gm_list, task_id=task_id)
 
             if lr_scheduler:
