@@ -399,6 +399,7 @@ def sample_data(model: torch.nn.Module, data_loader, gm_list, device,
         gm = GaussianMixture(n_components=5, random_state=0).fit(x_encoded.cpu().detach().numpy())
         print("OK")
         gm_list.append(gm)
+        print(len(gm_list))
 
 
 @torch.no_grad()
