@@ -427,7 +427,7 @@ def evaluate_new(model: torch.nn.Module, task_model: torch.nn.Module, data_loade
             prob = F.softmax(logits, dim = 1)
             print(f"prob: {prob.shape}")
 
-            task_id_infer = torch.argmax(prob)
+            task_id_infer = torch.argmax(prob, dim=1)
             print(f"task_id_infer: {task_id_infer.shape}")
 
             last_logits = model(input, task_id_infer)
