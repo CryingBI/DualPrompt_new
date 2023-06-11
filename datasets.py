@@ -58,6 +58,8 @@ def build_continual_dataloader(args):
     for i in range(args.num_tasks):
         if args.dataset.startswith('Split-'):
             dataset_train, dataset_val = splited_dataset[i]
+            print(f"len train dataset: {len(dataset_train)}")
+            print(f"len val dataset: {len(dataset_val)}")
 
         else:
             dataset_train, dataset_val = get_dataset(dataset_list[i], transform_train, transform_val, args)
