@@ -285,7 +285,7 @@ def train_task_model(task_model: torch.nn.Module, device, gm_list, task_id=-1,):
     input_train = []
     target_train = []
     for gm in gm_use:
-        input, target = gm.sample(n_samples=1024)
+        input, target = gm.sample(n_samples=10240)
         input = torch.from_numpy(input).float()
         target = torch.from_numpy(target).long()
         input_train.append(input)
