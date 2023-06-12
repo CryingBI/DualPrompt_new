@@ -419,24 +419,25 @@ def evaluate_new(model: torch.nn.Module, task_model: torch.nn.Module, data_loade
 
             output = model.forward_features(input, task_id)
             output['x'] = output['x'].mean(dim=1)
-            output['x'] = output['x'].mean(dim=0)
+            #output['x'] = output['x'].mean(dim=0)
             logits = task_model(output['x'])
             #print(f"logits: {logits.shape}")
 
-            prob = F.softmax(logits)
+            prob = F.softmax(logits, dim=1)
             #print(f"prob: {prob.shape}")
 
-            task_id_infer = torch.argmax(prob).item()
+            task_id_infer = torch.argmax(prob, dim=1).tolist()
 
-            last_logits = model(input, task_id_infer)
+            for task_id in task_id_infer:
+                last_logits = model(input, task_id)
 
-            loss = criterion(last_logits['logits'], target)
+                loss = criterion(last_logits['logits'], target)
 
-            acc1, acc5 = accuracy(last_logits['logits'], target, topk=(1, 5))
+                acc1, acc5 = accuracy(last_logits['logits'], target, topk=(1, 5))
 
-            metric_logger.meters['Loss'].update(loss.item())
-            metric_logger.meters['Acc@1'].update(acc1.item(), n=input.shape[0])
-            metric_logger.meters['Acc@5'].update(acc5.item(), n=input.shape[0])
+                metric_logger.meters['Loss'].update(loss.item())
+                metric_logger.meters['Acc@1'].update(acc1.item(), n=input.shape[0])
+                metric_logger.meters['Acc@5'].update(acc5.item(), n=input.shape[0])
 
     # gather the stats from all processes
     metric_logger.synchronize_between_processes()
