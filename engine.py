@@ -385,19 +385,14 @@ def sample_data(model: torch.nn.Module, data_loader, gm_list, device,
             input = input.to(device, non_blocking=True)
             #target = target.to(device, non_blocking=True)
 
-            output = model.forward_features(input, task_id)
-            x_embed_encode = output['x']
+            output = model(input, task_id)
+            x_embed_encode = output['pre_logits']
             x_encoded.append(x_embed_encode)
-        if args.dataset == 'Split-CIFAR100':
-            random_index = torch.randint(5000, (768,))
-        elif args.dataset == 'Split-Imagenet-R':
-            random_index = torch.randint(1600, (768,))
+        # if args.dataset == 'Split-CIFAR100':
+        #     random_index = torch.randint(5000, (768,))
+        # elif args.dataset == 'Split-Imagenet-R':
+        #     random_index = torch.randint(1600, (768,))
         x_encoded = torch.cat(x_encoded, dim=0)
-        x_encoded = x_encoded.reshape((x_encoded.shape[0], x_encoded.shape[1] * x_encoded.shape[2]))
-        x_encoded = x_encoded[random_index]
-        pca = PCA(n_components=768)
-        x_encoded = pca.fit(x_encoded.cpu().detach().numpy()).transform(x_encoded.cpu().detach().numpy())
-        x_encoded = torch.from_numpy(x_encoded)
         gm = GaussianMixture(n_components=10, random_state=0).fit(x_encoded.cpu().detach().numpy())
         gm_list.append(gm)
 
