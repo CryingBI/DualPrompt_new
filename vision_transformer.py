@@ -575,6 +575,7 @@ class VisionTransformer(nn.Module):
                 )
                 else:
                     prompt_mask = None
+                    task_infer = task_infer.unsqueeze(1)
                     batched_prompt_raw = self.e_prompt[:, :, task_infer]
                     num_layers, dual, batch_size, top_k, length, num_heads, heads_embed_dim = batched_prompt_raw.shape
                     batched_e_prompt = batched_prompt_raw.reshape(

@@ -422,9 +422,9 @@ def evaluate_new(model: torch.nn.Module, original_model: torch.nn.Module, task_m
 
             prob = F.softmax(logits, dim=1)
 
-            task_id_infer = torch.argmax(prob, dim=1).tolist()
+            task_id_infer = torch.argmax(prob, dim=1)
 
-            last_logits = model(input, task_infer=task_id_infer,)
+            last_logits = model(input, task_infer=task_id_infer)
 
             loss = criterion(last_logits['logits'], target)
 
