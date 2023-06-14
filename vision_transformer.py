@@ -464,7 +464,7 @@ class VisionTransformer(nn.Module):
                 self.e_prompt = nn.Parameter(torch.zeros(e_prompt_shape))
             elif prompt_init == 'uniform':
                 self.e_prompt = nn.Parameter(torch.randn(e_prompt_shape)) # num_layers, 2, pool_size, length, num_heads, embed_dim // num_heads
-                nn.init.uniform_(self.prompt, -1, 1)
+                nn.init.uniform_(self.e_prompt, -1, 1)
 
         if not (use_g_prompt or use_e_prompt):
             attn_layer = Attention
