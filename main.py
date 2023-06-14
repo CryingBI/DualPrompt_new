@@ -45,15 +45,15 @@ def main(args):
 
     data_loader, class_mask = build_continual_dataloader(args)
 
-    # print(f"Creating original model: {args.model}")
-    # original_model = create_model(
-    #     args.model,
-    #     pretrained=args.pretrained,
-    #     num_classes=args.nb_classes,
-    #     drop_rate=args.drop,
-    #     drop_path_rate=args.drop_path,
-    #     drop_block_rate=None,
-    # )
+    print(f"Creating original model: {args.model}")
+    original_model = create_model(
+        args.model,
+        pretrained=args.pretrained,
+        num_classes=args.nb_classes,
+        drop_rate=args.drop,
+        drop_path_rate=args.drop_path,
+        drop_block_rate=None,
+    )
 
     print(f"Creating model: {args.model}")
     model = create_model(
@@ -85,7 +85,7 @@ def main(args):
     )
     print("Creating task model")
     task_model = TaskClassifier(args)
-    # original_model.to(device)
+    original_model.to(device)
     model.to(device)
     task_model.to(device)  
 
@@ -93,8 +93,8 @@ def main(args):
 
     if args.freeze:
         # all parameters are frozen for original vit model
-        # for p in original_model.parameters():
-        #     p.requires_grad = False
+        for p in original_model.parameters():
+            p.requires_grad = False
         
         # freeze args.freeze[blocks, patch_embed, cls_token] parameters
         for n, p in model.named_parameters():

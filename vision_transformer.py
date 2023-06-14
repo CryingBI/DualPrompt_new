@@ -446,17 +446,25 @@ class VisionTransformer(nn.Module):
             #         prompt_key_init=prompt_key_init, num_layers=num_e_prompt, use_prefix_tune_for_e_prompt=use_prefix_tune_for_e_prompt,
             #         num_heads=num_heads, same_key_value=same_key_value)
             
-            self.e_prompt_all_task = []
-            e_prompt_shape=(num_e_prompt, 2, 5, num_heads, embed_dim // num_heads)
-            for _ in range(10):
-                if prompt_init == 'zero':
-                    self.e_prompt = nn.Parameter(torch.zeros(e_prompt_shape)).to("cuda:0")
-                    self.e_prompt_all_task.append(self.e_prompt)
-                elif prompt_init == 'uniform':
-                    self.e_prompt = nn.Parameter(torch.randn(e_prompt_shape)).to("cuda:0")
-                    nn.init.uniform_(self.e_prompt, -1, 1)
-                    self.e_prompt_all_task.append(self.e_prompt)
-            #self.e_prompt_all_task = torch.cat(self.e_prompt_all_task, dim = 0).to("cuda:0")
+            #c1:
+            # self.e_prompt_all_task = []
+            # e_prompt_shape=(num_e_prompt, 2, 5, num_heads, embed_dim // num_heads)
+            # for _ in range(10):
+            #     if prompt_init == 'zero':
+            #         self.e_prompt = nn.Parameter(torch.zeros(e_prompt_shape)).to("cuda:0")
+            #         self.e_prompt_all_task.append(self.e_prompt)
+            #     elif prompt_init == 'uniform':
+            #         self.e_prompt = nn.Parameter(torch.randn(e_prompt_shape)).to("cuda:0")
+            #         nn.init.uniform_(self.e_prompt, -1, 1)
+            #         self.e_prompt_all_task.append(self.e_prompt)
+
+            #c2:
+            e_prompt_shape=(num_e_prompt, 2, 10, 5, num_heads, embed_dim // num_heads)
+            if prompt_init == 'zero':
+                self.e_prompt = nn.Parameter(torch.zeros(e_prompt_shape))
+            elif prompt_init == 'uniform':
+                self.e_prompt = nn.Parameter(torch.randn(e_prompt_shape)) # num_layers, 2, pool_size, length, num_heads, embed_dim // num_heads
+                nn.init.uniform_(self.prompt, -1, 1)
 
         if not (use_g_prompt or use_e_prompt):
             attn_layer = Attention
@@ -531,7 +539,7 @@ class VisionTransformer(nn.Module):
             self.global_pool = global_pool
         self.head = nn.Linear(self.embed_dim, num_classes) if num_classes > 0 else nn.Identity()
 
-    def forward_features(self, x, task_id=-1, train=False):
+    def forward_features(self, x, task_infer=None, task_id=-1, train=False):
         x = self.patch_embed(x)
 
         # if task_id >= 0:
@@ -553,21 +561,26 @@ class VisionTransformer(nn.Module):
             x = checkpoint_seq(self.blocks, x)
         else:
             if self.use_g_prompt or self.use_e_prompt:
-                # if self.use_prompt_mask and train:
-                #     start = task_id * self.e_prompt.top_k
-                #     end = (task_id + 1) * self.e_prompt.top_k
-                #     single_prompt_mask = torch.arange(start, end).to(x.device)
-                #     prompt_mask = single_prompt_mask.unsqueeze(0).expand(x.shape[0], -1)
-                #     if end > self.e_prompt.pool_size:
-                #         prompt_mask = None
-                # else:
-                #     prompt_mask = None
+                if self.use_prompt_mask and train:
+                    start = task_id
+                    end = (task_id + 1)
+                    single_prompt_mask = torch.arange(start, end).to(x.device)
+                    prompt_mask = single_prompt_mask.unsqueeze(0).expand(x.shape[0], -1)
+                    if end > 10:
+                        prompt_mask = None
+                    batched_prompt_raw = self.e_prompt[:,:, prompt_mask]
+                    batched_e_prompt = batched_prompt_raw.reshape(3, 24, 2, 5, 12, 64)
+                else:
+                    prompt_mask = None
+                    batched_prompt_raw = self.e_prompt[:, :, task_infer]
+                    batched_e_prompt = batched_prompt_raw.reshape(3, 24, 2, 5, 12, 64)
                 
                 g_prompt_counter = -1
                 e_prompt_counter = -1
 
                 # res = self.e_prompt(x, prompt_mask=prompt_mask, cls_features=cls_features)
                 # e_prompt = res['batched_prompt']
+
                 res = dict()
 
                 for i, block in enumerate(self.blocks):
@@ -587,13 +600,9 @@ class VisionTransformer(nn.Module):
                         e_prompt_counter += 1
                         if self.use_prefix_tune_for_e_prompt:
                             # Prefix tunning, [B, 2, top_k * e_prompt_length, num_heads, embed_dim // num_heads]
-                            idx = torch.tensor([e_prompt_counter] * x.shape[0]).to(x.device)
-                            task_id = torch.tensor([task_id]).to(x.device)
-                            #print(task_id)
                             #[24, 3, 2, 5, 12, 64]
-                            e_prompt_new = self.e_prompt_all_task[task_id][idx]
-                            
-                            x = block(x, prompt=e_prompt_new)
+
+                            x = block(x, prompt=batched_e_prompt[e_prompt_counter])
                         
                             # Pommpt tunning, [B, top_k * e_prompt_length, embed_dim]
                             # prompt = e_prompt[e_prompt_counter]
@@ -638,8 +647,8 @@ class VisionTransformer(nn.Module):
         
         return res
 
-    def forward(self, x, task_id=-1, train=False):
-        res = self.forward_features(x, task_id=task_id, train=train)
+    def forward(self, x, task_infer=None, task_id=-1, train=False):
+        res = self.forward_features(x, task_infer=None, task_id=task_id, train=train)
         res = self.forward_head(res)
         return res
 

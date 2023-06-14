@@ -331,7 +331,7 @@ def train_simple_model(model: torch.nn.Module,
         input = input.to(device, non_blocking=True)
         target = target.to(device, non_blocking=True)
 
-        output = model(input, task_id=task_id, train=set_training_mode)
+        output = model(input, task_infer=None, task_id=task_id, train=set_training_mode)
         logits = output['logits']
 
         # here is the trick to mask out classes of non-current tasks
@@ -370,7 +370,7 @@ def train_simple_model(model: torch.nn.Module,
 
 
 @torch.no_grad()
-def sample_data(model: torch.nn.Module, data_loader, gm_list, device,
+def sample_data(original_model: torch.nn.Module, data_loader, gm_list, device,
     task_id=-1, args=None):
     
     metric_logger = utils.MetricLogger(delimiter="  ")
@@ -379,26 +379,22 @@ def sample_data(model: torch.nn.Module, data_loader, gm_list, device,
 
     x_encoded = []
 
-    model.eval()
+    original_model.eval()
     with torch.no_grad():
         for input, target in metric_logger.log_every(data_loader, args.print_freq, header):
             input = input.to(device, non_blocking=True)
             #target = target.to(device, non_blocking=True)
 
-            output = model(input, task_id)
+            output = original_model(input)
             x_embed_encode = output['pre_logits']
             x_encoded.append(x_embed_encode)
-        # if args.dataset == 'Split-CIFAR100':
-        #     random_index = torch.randint(5000, (768,))
-        # elif args.dataset == 'Split-Imagenet-R':
-        #     random_index = torch.randint(1600, (768,))
         x_encoded = torch.cat(x_encoded, dim=0)
         gm = GaussianMixture(n_components=10, random_state=0).fit(x_encoded.cpu().detach().numpy())
         gm_list.append(gm)
 
 
 @torch.no_grad()
-def evaluate_new(model: torch.nn.Module, task_model: torch.nn.Module, data_loader, 
+def evaluate_new(model: torch.nn.Module, original_model: torch.nn.Module, task_model: torch.nn.Module, data_loader, 
             device, task_id=-1, class_mask=None, args=None,):
     
     criterion = torch.nn.CrossEntropyLoss()
@@ -416,28 +412,27 @@ def evaluate_new(model: torch.nn.Module, task_model: torch.nn.Module, data_loade
             target = target.to(device, non_blocking=True)
 
             # compute output
+            if original_model is not None:
+                output = original_model(input)
+                cls_features = output['pre_logits']
+            else:
+                cls_features = None
 
-            output = model.forward_features(input, task_id)
-            output['x'] = output['x'].mean(dim=1)
-            #output['x'] = output['x'].mean(dim=0)
-            logits = task_model(output['x'])
-            #print(f"logits: {logits.shape}")
+            logits = task_model(cls_features)
 
             prob = F.softmax(logits, dim=1)
-            #print(f"prob: {prob.shape}")
 
             task_id_infer = torch.argmax(prob, dim=1).tolist()
 
-            for task_id in task_id_infer:
-                last_logits = model(input, task_id)
+            last_logits = model(input, task_infer=task_id_infer,)
 
-                loss = criterion(last_logits['logits'], target)
+            loss = criterion(last_logits['logits'], target)
 
-                acc1, acc5 = accuracy(last_logits['logits'], target, topk=(1, 5))
+            acc1, acc5 = accuracy(last_logits['logits'], target, topk=(1, 5))
 
-                metric_logger.meters['Loss'].update(loss.item())
-                metric_logger.meters['Acc@1'].update(acc1.item(), n=input.shape[0])
-                metric_logger.meters['Acc@5'].update(acc5.item(), n=input.shape[0])
+            metric_logger.meters['Loss'].update(loss.item())
+            metric_logger.meters['Acc@1'].update(acc1.item(), n=input.shape[0])
+            metric_logger.meters['Acc@5'].update(acc5.item(), n=input.shape[0])
 
     # gather the stats from all processes
     metric_logger.synchronize_between_processes()
@@ -448,13 +443,13 @@ def evaluate_new(model: torch.nn.Module, task_model: torch.nn.Module, data_loade
 
 
 @torch.no_grad()
-def evaluate_till_now_new(model: torch.nn.Module, task_model: torch.nn.Module, data_loader, 
+def evaluate_till_now_new(model: torch.nn.Module, original_model: torch.nn.Module, task_model: torch.nn.Module, data_loader, 
             device, task_id=-1, class_mask=None, acc_matrix=None, args=None,):
     
     stat_matrix = np.zeros((3, args.num_tasks)) # 3 for Acc@1, Acc@5, Loss
 
     for i in range(task_id+1):
-        test_stats = evaluate_new(model=model, task_model=task_model, data_loader=data_loader[i]['val'], 
+        test_stats = evaluate_new(model=model, original_model=original_model, task_model=task_model, data_loader=data_loader[i]['val'], 
                             device=device, task_id=i, class_mask=class_mask, args=args)
         stat_matrix[0, i] = test_stats['Acc@1']
         stat_matrix[1, i] = test_stats['Acc@5']
@@ -476,7 +471,7 @@ def evaluate_till_now_new(model: torch.nn.Module, task_model: torch.nn.Module, d
     print(result_str)
 
     return test_stats
-def train_and_evaluate_new(model: torch.nn.Module, task_model, 
+def train_and_evaluate_new(model: torch.nn.Module, original_model: torch.nn.Module, task_model, 
                     criterion, data_loader: Iterable, optimizer: torch.optim.Optimizer, lr_scheduler, gm_list, device: torch.device, 
                     class_mask=None, args = None,):
     
@@ -492,7 +487,7 @@ def train_and_evaluate_new(model: torch.nn.Module, task_model,
         if task_id > 0 and args.reinit_optimizer:
             optimizer = create_optimizer(args, model)
         
-        sample_data(model=model, data_loader=data_loader[task_id]['train'], gm_list=gm_list, device=device, task_id=task_id, args=args)
+        sample_data(original_model=original_model, data_loader=data_loader[task_id]['train'], gm_list=gm_list, device=device, task_id=task_id, args=args)
 
         for epoch in range(args.epochs):
             
@@ -505,7 +500,7 @@ def train_and_evaluate_new(model: torch.nn.Module, task_model,
 
             if lr_scheduler:
                 lr_scheduler.step(epoch)
-        test_stat = evaluate_till_now_new(model=model, task_model=task_model, data_loader=data_loader, device=device,
+        test_stat = evaluate_till_now_new(model=model, original_model=original_model, task_model=task_model, data_loader=data_loader, device=device,
                                         task_id=task_id, class_mask=class_mask, acc_matrix=acc_matrix, args=args,)
         
         if args.output_dir and utils.is_main_process():
