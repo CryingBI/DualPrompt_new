@@ -424,6 +424,8 @@ def evaluate_new(model: torch.nn.Module, original_model: torch.nn.Module, task_m
 
             task_id_infer = torch.argmax(prob, dim=1)
 
+            print("task_id_infer", task_id_infer)
+
             last_logits = model(input, task_infer=task_id_infer)
 
             loss = criterion(last_logits['logits'], target)
@@ -491,11 +493,11 @@ def train_and_evaluate_new(model: torch.nn.Module, original_model: torch.nn.Modu
 
         for epoch in range(args.epochs):
             
-            train_simple_stat = train_simple_model(model=model, criterion=criterion,
-                                            data_loader=data_loader[task_id]['train'], optimizer=optimizer,
-                                            device=device, epoch=epoch, max_norm = args.clip_grad,
-                                            set_training_mode=True, task_id=task_id, class_mask=class_mask,
-                                            args=args)
+            # train_simple_stat = train_simple_model(model=model, criterion=criterion,
+            #                                 data_loader=data_loader[task_id]['train'], optimizer=optimizer,
+            #                                 device=device, epoch=epoch, max_norm = args.clip_grad,
+            #                                 set_training_mode=True, task_id=task_id, class_mask=class_mask,
+            #                                 args=args)
             train_task_stat = train_task_model(task_model=task_model, device=device, gm_list=gm_list, task_id=task_id)
 
             if lr_scheduler:
