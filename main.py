@@ -146,7 +146,7 @@ def main(args):
     print(f"Start training for {args.epochs} epochs")
     start_time = time.time()
 
-    train_and_evaluate_new(model, task_model,
+    train_and_evaluate_new(model, original_model, task_model,
                     criterion, data_loader, optimizer, lr_scheduler, gm_list,
                     device, class_mask, args)
 
