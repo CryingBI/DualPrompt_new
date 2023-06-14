@@ -539,7 +539,7 @@ class VisionTransformer(nn.Module):
             self.global_pool = global_pool
         self.head = nn.Linear(self.embed_dim, num_classes) if num_classes > 0 else nn.Identity()
 
-    def forward_features(self, x, task_infer=None, task_id=-1, train=False):
+    def forward_features(self, x, task_infer, task_id=-1, train=False):
         x = self.patch_embed(x)
 
         # if task_id >= 0:
