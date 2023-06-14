@@ -385,7 +385,7 @@ def sample_data(original_model: torch.nn.Module, data_loader, gm_list, device,
             input = input.to(device, non_blocking=True)
             #target = target.to(device, non_blocking=True)
 
-            output = original_model(input)
+            output = original_model(input, task_infer=None)
             x_embed_encode = output['pre_logits']
             x_encoded.append(x_embed_encode)
         x_encoded = torch.cat(x_encoded, dim=0)
@@ -413,7 +413,7 @@ def evaluate_new(model: torch.nn.Module, original_model: torch.nn.Module, task_m
 
             # compute output
             if original_model is not None:
-                output = original_model(input)
+                output = original_model(input, task_infer=None)
                 cls_features = output['pre_logits']
             else:
                 cls_features = None
