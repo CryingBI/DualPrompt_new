@@ -569,11 +569,17 @@ class VisionTransformer(nn.Module):
                     if end > 10:
                         prompt_mask = None
                     batched_prompt_raw = self.e_prompt[:,:, prompt_mask]
-                    batched_e_prompt = batched_prompt_raw.reshape(3, 24, 2, 5, 12, 64)
+                    num_layers, dual, batch_size, top_k, length, num_heads, heads_embed_dim = batched_prompt_raw.shape
+                    batched_e_prompt = batched_prompt_raw.reshape(
+                    num_layers, batch_size, dual, top_k * length, num_heads, heads_embed_dim
+                )
                 else:
                     prompt_mask = None
                     batched_prompt_raw = self.e_prompt[:, :, task_infer]
-                    batched_e_prompt = batched_prompt_raw.reshape(3, 24, 2, 5, 12, 64)
+                    num_layers, dual, batch_size, top_k, length, num_heads, heads_embed_dim = batched_prompt_raw.shape
+                    batched_e_prompt = batched_prompt_raw.reshape(
+                    num_layers, batch_size, dual, top_k * length, num_heads, heads_embed_dim
+                )
                 
                 g_prompt_counter = -1
                 e_prompt_counter = -1
