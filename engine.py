@@ -409,7 +409,7 @@ def evaluate_task_model(original_model: torch.nn.Module, task_model: torch.nn.Mo
             input = input.to(device, non_blocking=True)
             #target = target.to(device, non_blocking=True)
             target_logits_raw = torch.Tensor([task_id])
-            target_logits = target_logits_raw.expand(input.shape[0], -1)
+            target_logits = target_logits_raw.expand(input.shape[0], -1).to(device, non_blocking=True)
 
             # compute output
             if original_model is not None:
@@ -423,9 +423,9 @@ def evaluate_task_model(original_model: torch.nn.Module, task_model: torch.nn.Mo
             prob = F.softmax(logits, dim=1)
 
             task_id_infer = torch.argmax(prob, dim=1)
-            task_id_infer = task_id_infer.unsqueeze(1)
+            task_id_infer = task_id_infer.unsqueeze(1).to(device, non_blocking=True)
 
-            z = torch.eq(task_id_infer, target_logits).sum().item()
+            z = torch.eq(task_id_infer, target_logits).to(device, non_blocking=True).sum().item()
             sample_predict_true += z
     
     print("sample_predict_true", sample_predict_true)
