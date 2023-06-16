@@ -75,7 +75,7 @@ def get_args_parser(subparsers):
     subparsers.add_argument('--task_inc', default=False, type=bool, help='if doing task incremental')
 
     # G-Prompt parameters
-    subparsers.add_argument('--use_g_prompt', default=True, type=bool, help='if using G-Prompt')
+    subparsers.add_argument('--use_g_prompt', default=False, type=bool, help='if using G-Prompt')
     subparsers.add_argument('--g_prompt_length', default=5, type=int, help='length of G-Prompt')
     subparsers.add_argument('--g_prompt_layer_idx', default=[0, 1], type=int, nargs = "+", help='the layer index of the G-Prompt')
     subparsers.add_argument('--use_prefix_tune_for_g_prompt', default=True, type=bool, help='if using the prefix tune for G-Prompt')
