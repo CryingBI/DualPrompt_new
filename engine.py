@@ -389,7 +389,7 @@ def sample_data(original_model: torch.nn.Module, data_loader, gm_list, device,
             x_embed_encode = output['pre_logits']
             x_encoded.append(x_embed_encode)
         x_encoded = torch.cat(x_encoded, dim=0)
-        gm = GaussianMixture(n_components=10, random_state=0).fit(x_encoded.cpu().detach().numpy())
+        gm = GaussianMixture(n_components=3, random_state=0).fit(x_encoded.cpu().detach().numpy())
         gm_list.append(gm)
 
 
@@ -401,6 +401,7 @@ def evaluate_task_model(model: torch.nn.Module, original_model: torch.nn.Module,
 
     metric_logger = utils.MetricLogger(delimiter="  ")
     header = 'Test task model: [Task {}]'.format(task_id + 1)
+
 
     task_model.eval()
     with torch.no_grad():
@@ -414,6 +415,8 @@ def evaluate_task_model(model: torch.nn.Module, original_model: torch.nn.Module,
                 cls_features = output['pre_logits']
             else:
                 cls_features = None
+            
+
 
 @torch.no_grad()
 def evaluate_new(model: torch.nn.Module, original_model: torch.nn.Module, task_model: torch.nn.Module, data_loader, 
