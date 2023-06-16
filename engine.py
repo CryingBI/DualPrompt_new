@@ -389,25 +389,27 @@ def sample_data(original_model: torch.nn.Module, data_loader, gm_list, device,
             x_embed_encode = output['pre_logits']
             x_encoded.append(x_embed_encode)
         x_encoded = torch.cat(x_encoded, dim=0)
-        gm = GaussianMixture(n_components=3, random_state=0).fit(x_encoded.cpu().detach().numpy())
+        gm = GaussianMixture(n_components=10, random_state=0).fit(x_encoded.cpu().detach().numpy())
         gm_list.append(gm)
 
 
 @torch.no_grad()
-def evaluate_task_model(model: torch.nn.Module, original_model: torch.nn.Module, task_model: torch.nn.Module, data_loader, 
+def evaluate_task_model(original_model: torch.nn.Module, task_model: torch.nn.Module, data_loader, 
             device, task_id=-1, class_mask=None, args=None,):
     
     criterion = torch.nn.CrossEntropyLoss()
 
     metric_logger = utils.MetricLogger(delimiter="  ")
     header = 'Test task model: [Task {}]'.format(task_id + 1)
-
+    sample_predict_true = 0
 
     task_model.eval()
     with torch.no_grad():
         for input, target in metric_logger.log_every(data_loader, args.print_freq, header):
             input = input.to(device, non_blocking=True)
-            target = target.to(device, non_blocking=True)
+            #target = target.to(device, non_blocking=True)
+            target_logits_raw = torch.Tensor([task_id])
+            target_logits = target_logits_raw.expand(input.shape[0], -1)
 
             # compute output
             if original_model is not None:
@@ -416,6 +418,19 @@ def evaluate_task_model(model: torch.nn.Module, original_model: torch.nn.Module,
             else:
                 cls_features = None
             
+            logits = task_model(cls_features)
+
+            prob = F.softmax(logits, dim=1)
+
+            task_id_infer = torch.argmax(prob, dim=1)
+            task_id_infer = task_id_infer.unsqueeze(1)
+
+            z = torch.eq(task_id_infer, target_logits).sum().item()
+            sample_predict_true += z
+    
+    print("sample_predict_true", sample_predict_true)
+
+
 
 
 @torch.no_grad()
@@ -478,11 +493,15 @@ def evaluate_till_now_new(model: torch.nn.Module, original_model: torch.nn.Modul
     for i in range(task_id+1):
         test_stats = evaluate_new(model=model, original_model=original_model, task_model=task_model, data_loader=data_loader[i]['val'], 
                             device=device, task_id=i, class_mask=class_mask, args=args)
+        
         stat_matrix[0, i] = test_stats['Acc@1']
         stat_matrix[1, i] = test_stats['Acc@5']
         stat_matrix[2, i] = test_stats['Loss']
 
         acc_matrix[i, task_id] = test_stats['Acc@1']
+
+        evaluate_task_model(original_model=original_model, task_model=task_model, data_loader=data_loader[i]['val'], device=device,
+                            task_id=i,class_mask=class_mask, args=args)
 
     avg_stat = np.divide(np.sum(stat_matrix, axis=1), task_id+1)
 
