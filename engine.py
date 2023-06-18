@@ -281,7 +281,8 @@ def train_task_model(task_model: torch.nn.Module, device, gm_list, task_id=-1,):
     # metric_logger.add_meter('Loss', utils.SmoothedValue(window_size=1, fmt='{value:.4f}'))
     # header = 'Train_task_model: [Task {}]'.format(task_id + 1)
     
-    gm_use = gm_list[:(task_id+1)]
+    #gm_use = gm_list[:(task_id+1)]
+    gm_use = gm_list[task_id]
     print("len gm_use",len(gm_use))
     input_train = []
     target_train = []
