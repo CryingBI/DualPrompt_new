@@ -389,7 +389,7 @@ def sample_data(original_model: torch.nn.Module, data_loader, gm_list, device,
             x_embed_encode = output['pre_logits']
             x_encoded.append(x_embed_encode)
         x_encoded = torch.cat(x_encoded, dim=0)
-        gm = GaussianMixture(n_components=10, random_state=0).fit(x_encoded.cpu().detach().numpy())
+        gm = GaussianMixture(n_components=1, random_state=0).fit(x_encoded.cpu().detach().numpy())
         gm_list.append(gm)
 
 
