@@ -287,10 +287,10 @@ def train_task_model(task_model: torch.nn.Module, device, gm_list, task_id=-1,):
     input_train = []
     target_train = []
     for i in range(len(gm_use)):
-        input, target = gm_use[i].sample(n_samples=1024*(i+1))
+        input, target = gm_use[i].sample(n_samples=5000*(i+1))
         input = torch.from_numpy(input).float()
         #target = torch.from_numpy(target).long()
-        new_target = torch.Tensor([i]).expand(1024).long()
+        new_target = torch.Tensor([i]).expand(5000).long()
         input_train.append(input)
         target_train.append(new_target)
 
