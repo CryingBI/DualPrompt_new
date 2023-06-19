@@ -582,7 +582,7 @@ class VisionTransformer(nn.Module):
                     num_layers, batch_size, dual, top_k * length, num_heads, heads_embed_dim
                 )
                 
-                g_prompt_counter = -1
+                #g_prompt_counter = -1
                 e_prompt_counter = -1
 
                 # res = self.e_prompt(x, prompt_mask=prompt_mask, cls_features=cls_features)

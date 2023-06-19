@@ -298,7 +298,7 @@ def train_task_model(task_model: torch.nn.Module, device, gm_list, task_id=-1,):
     target_train = torch.cat(target_train, dim=0)
 
     train_dataset = TensorDataset(input_train, target_train)
-    train_dataloader = DataLoader(train_dataset, batch_size=24)
+    train_dataloader = DataLoader(train_dataset, batch_size=24, shuffle=True)
 
     for batch, (input, target) in enumerate(train_dataloader):
         input, target = input.to(device), target.to(device)
