@@ -304,10 +304,10 @@ def train_task_model(task_model: torch.nn.Module, device, gm_list, task_id=-1,):
         input, target = input.to(device), target.to(device)
 
         pred = task_model(input)
-        prob = F.softmax(pred, dim=1)
+        # prob = F.softmax(pred, dim=1)
 
-        task_id_infer = torch.argmax(prob, dim=1)
-        task_id_infer = task_id_infer.to(device, non_blocking=True)
+        # task_id_infer = torch.argmax(prob, dim=1)
+        # task_id_infer = task_id_infer.to(device, non_blocking=True)
 
         loss = loss_fn(pred, target)
 
