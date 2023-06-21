@@ -28,6 +28,7 @@ from sklearn.decomposition import PCA
 from torch.utils.data import DataLoader, TensorDataset
 import torch.nn.functional as F
 
+from copy import deepcopy
 import utils
 
 
@@ -325,6 +326,8 @@ def train_simple_model(model: torch.nn.Module,
                     device: torch.device, epoch: int, max_norm: float = 0,
                     set_training_mode=True, task_id=-1, class_mask=None, args = None,):
     
+    freeze = {}
+
     model.train(set_training_mode)
 
     if args.distributed and utils.get_world_size() > 1:
@@ -371,8 +374,12 @@ def train_simple_model(model: torch.nn.Module,
         metric_logger.meters['Acc@5'].update(acc5.item(), n=input.shape[0])
 
         if task_id > 0:
-            print(model.head)
-                
+            for (name, param) in model.named_parameters():
+                if 'head' in name:
+                    key = name.split('.')[0]
+                    param.data = param.data*freeze[key]
+            
+    proxy_grad_descent(model, model_old,)
         
     # gather the stats from all processes
     metric_logger.synchronize_between_processes()
@@ -537,8 +544,25 @@ def train_and_evaluate_new(model: torch.nn.Module, original_model: torch.nn.Modu
     acc_matrix = np.zeros((args.num_tasks, args.num_tasks))
 
     for task_id in range(args.num_tasks):
-        # Transfer previous learned prompt params to the new prompt
 
+        #ags-cl
+        if task_id > 0:
+            freeze = {}
+            omega = None
+            for name, param in model.named_parameters():
+                if 'head' in name:
+                    key = name.split('.')[0]
+                    
+                    temp = torch.ones_like(param)
+                    temp = temp.reshape((temp.size(0), omega[prekey].size(0) , -1))
+                    temp[:, omega[prekey] == 0] = 0
+                    temp[omega[key] == 0] = 1
+                    freeze[key] = temp.reshape(param.shape)
+                else:
+                    continue
+
+                prekey = key
+        # Transfer previous learned prompt params to the new prompt
         if args.prompt_pool and args.shared_prompt_pool:
             if task_id > 0:
                 prev_start = (task_id - 1) * args.top_k
@@ -601,10 +625,54 @@ def train_and_evaluate_new(model: torch.nn.Module, original_model: torch.nn.Modu
         if args.output_dir and utils.is_main_process():
             with open(os.path.join(args.output_dir, '{}_stats.txt'.format(datetime.datetime.now().strftime('log_%Y_%m_%d_%H_%M'))), 'a') as f:
                 f.write(json.dumps(log_stats) + '\n')
-
-
-
-
         
+        #store old head model use ags-cl
+        head_old = deepcopy(model.head)
+        head_old.train()
+        for param in head_old.parameters():
+            param.requires_grad = False
 
 
+
+
+@torch.no_grad()
+def proxy_grad_descent(model: torch.nn.Module, model_old: torch.nn.Module):
+
+    lr = 0.001
+    mu = 10
+    mask = {}
+
+    for (name,p) in model.named_parameters():
+        if 'head' in name:
+            name = name.split('.')[:-1]
+            name = '.'.join(name)
+            mask[name] = torch.zeros(p.shape[0])
+    
+    with torch.no_grad():
+        for (name,module),(_,module_old) in zip(model.named_children(), model_old.named_children()):
+            if 'head' in name:
+                key = name 
+                weight = module.weight
+                bias = module.bias
+
+                weight_old = module_old.weight
+                bias_old = module_old.bias
+
+                if len(weight.size()) > 2:
+                    norm = weight.norm(2, dim=(1,2,3))
+                else:
+                    norm = weight.norm(2, dim=(1))
+                norm = (norm**2 + bias**2).pow(1/2)                
+
+                aux = F.threshold(norm - mu * lr, 0, 0, False)
+                alpha = aux/(aux+mu*lr)
+                coeff = alpha * (1-mask[key])
+
+                if len(weight.size()) > 2:
+                    sparse_weight = weight.data * coeff.unsqueeze(-1).unsqueeze(-1).unsqueeze(-1) 
+                else:
+                    sparse_weight = weight.data * coeff.unsqueeze(-1) 
+                sparse_bias = bias.data * coeff
+
+                penalty_weight = 0
+                penalty_bias = 0
