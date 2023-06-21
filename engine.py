@@ -369,6 +369,10 @@ def train_simple_model(model: torch.nn.Module,
         metric_logger.update(Lr=optimizer.param_groups[0]["lr"])
         metric_logger.meters['Acc@1'].update(acc1.item(), n=input.shape[0])
         metric_logger.meters['Acc@5'].update(acc5.item(), n=input.shape[0])
+
+        if task_id > 0:
+            print(model.head)
+                
         
     # gather the stats from all processes
     metric_logger.synchronize_between_processes()
