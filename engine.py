@@ -445,6 +445,8 @@ def evaluate_task_model(original_model: torch.nn.Module, task_model: torch.nn.Mo
     sample_predict_true = 0
 
     task_model.eval()
+    original_model.eval()
+
     with torch.no_grad():
         for input, target in metric_logger.log_every(data_loader, args.print_freq, header):
             input = input.to(device, non_blocking=True)
@@ -484,6 +486,7 @@ def evaluate_new(model: torch.nn.Module, original_model: torch.nn.Module, task_m
     header = 'Test: [Task {}]'.format(task_id + 1)
 
     # switch to evaluation mode
+    original_model.eval()
     model.eval()
     task_model.eval()
 
