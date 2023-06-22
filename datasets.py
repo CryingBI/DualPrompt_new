@@ -30,6 +30,70 @@ class Lambda(transforms.Lambda):
 def target_transform(x, nb_classes):
     return x + nb_classes
 
+def split_each_class(dataset_train, args):
+    nb_classes = len(dataset_train.classes)
+    assert nb_classes % args.num_tasks == 0
+    classes_per_task = nb_classes // args.num_tasks
+
+    labels = [i for i in range(nb_classes)]
+    
+    split_datasets_each_class = list()
+    mask = list()
+
+    if args.shuffle:
+        random.shuffle(labels)
+    
+    for _ in range(args.num_tasks):
+
+        prototype_each_class_indices = []
+        
+        scope = labels[:classes_per_task]
+        labels = labels[classes_per_task:]
+
+        mask.append(scope)
+
+        for m in scope:
+            for k in range(len(dataset_train.targets)):
+                if int(dataset_train.targets[k]) == m:
+                    prototype_each_class_indices.append(k)
+
+        prototype_train_each_class = Subset(dataset_train, prototype_each_class_indices)
+
+        split_datasets_each_class.append(prototype_train_each_class)
+    
+    return split_datasets_each_class, mask
+
+def build_dataset_each_class(args):
+    dataloader_each_class = list()
+
+    transform_train = build_transform(True, args)
+    transform_val = build_transform(False, args)
+
+    if args.dataset.startswith('Split-'):
+        dataset_train, dataset_val = get_dataset(args.dataset.replace('Split-',''), transform_train, transform_val, args)
+        args.nb_classes = len(dataset_val.classes)
+
+        split_datasets_each_class, class_mask_2 = split_each_class(dataset_train, args)
+
+        for i in range(args.num_tasks):
+            if args.dataset.startswith('Split-'):
+
+                dataset_train_each_class = split_datasets_each_class[i]
+
+            sampler_train_each_class = torch.utils.data.RandomSampler(dataset_train_each_class)
+
+            data_loader_train_each_class = torch.utils.data.DataLoader(
+                dataset_train_each_class, sampler=sampler_train_each_class,
+                batch_size=args.batch_size,
+                num_workers=args.num_workers,
+                pin_memory=args.pin_mem,
+            )
+
+            dataloader_each_class.append({'train_each_class': data_loader_train_each_class})
+
+    return dataloader_each_class, class_mask_2
+    
+
 def build_continual_dataloader(args):
     dataloader = list()
     class_mask = list() if args.task_inc or args.train_mask else None

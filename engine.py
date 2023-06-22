@@ -282,16 +282,35 @@ def train_task_model(task_model: torch.nn.Module, device, gm_list, task_id=-1,):
     # metric_logger.add_meter('Loss', utils.SmoothedValue(window_size=1, fmt='{value:.4f}'))
     # header = 'Train_task_model: [Task {}]'.format(task_id + 1)
     
-    gm_use = gm_list[:(task_id+1)]
+    gm_use = gm_list[:10*(task_id+1)]
     #gm_use = gm_list[task_id]
     print("len gm_use",len(gm_use))
     input_train = []
     target_train = []
     for i in range(len(gm_use)):
-        input, target = gm_use[i].sample(n_samples=5000)
+        input, target = gm_use[i].sample(n_samples=500)
         input = torch.from_numpy(input).float()
         #target = torch.from_numpy(target).long()
-        new_target = torch.Tensor([i]).expand(5000).long()
+        if i < 10:
+            new_target = torch.Tensor([0]).expand(500).long()
+        elif i >= 10 and i < 20:
+            new_target = torch.Tensor([1]).expand(500).long()
+        elif i >= 20 and i < 30:
+            new_target = torch.Tensor([2]).expand(500).long()
+        elif i >= 30 and i < 40:
+            new_target = torch.Tensor([3]).expand(500).long()
+        elif i >= 40 and i < 50:
+            new_target = torch.Tensor([4]).expand(500).long()
+        elif i >= 50 and i < 60:
+            new_target = torch.Tensor([5]).expand(500).long()
+        elif i >= 60 and i < 70:
+            new_target = torch.Tensor([6]).expand(500).long()
+        elif i >= 70 and i < 80:
+            new_target = torch.Tensor([7]).expand(500).long()
+        elif i >= 80 and i < 90:
+            new_target = torch.Tensor([8]).expand(500).long()
+        elif i >= 90 and i < 100:
+            new_target = torch.Tensor([9]).expand(500).long()    
         input_train.append(input)
         target_train.append(new_target)
 
@@ -373,13 +392,13 @@ def train_simple_model(model: torch.nn.Module,
         metric_logger.meters['Acc@1'].update(acc1.item(), n=input.shape[0])
         metric_logger.meters['Acc@5'].update(acc5.item(), n=input.shape[0])
 
-        if task_id > 0:
-            for (name, param) in model.named_parameters():
-                if 'head' in name:
-                    key = name.split('.')[0]
-                    param.data = param.data*freeze[key]
+        # if task_id > 0:
+        #     for (name, param) in model.named_parameters():
+        #         if 'head' in name:
+        #             key = name.split('.')[0]
+        #             param.data = param.data*freeze[key]
             
-    proxy_grad_descent(model, model_old,)
+    #proxy_grad_descent(model, model_old,)
         
     # gather the stats from all processes
     metric_logger.synchronize_between_processes()
@@ -389,7 +408,7 @@ def train_simple_model(model: torch.nn.Module,
 
 
 @torch.no_grad()
-def sample_data(original_model: torch.nn.Module, data_loader, gm_list, device,
+def sample_data(original_model: torch.nn.Module, dataloader_each_class, gm_list, device,
     task_id=-1, args=None):
     
     metric_logger = utils.MetricLogger(delimiter="  ")
@@ -400,7 +419,7 @@ def sample_data(original_model: torch.nn.Module, data_loader, gm_list, device,
 
     original_model.eval()
     with torch.no_grad():
-        for input, target in metric_logger.log_every(data_loader, args.print_freq, header):
+        for input, target in metric_logger.log_every(dataloader_each_class, args.print_freq, header):
             input = input.to(device, non_blocking=True)
             #target = target.to(device, non_blocking=True)
 
@@ -408,8 +427,11 @@ def sample_data(original_model: torch.nn.Module, data_loader, gm_list, device,
             x_embed_encode = output['pre_logits']
             x_encoded.append(x_embed_encode)
         x_encoded = torch.cat(x_encoded, dim=0)
-        gm = GaussianMixture(n_components=1, random_state=0).fit(x_encoded.cpu().detach().numpy())
-        gm_list.append(gm)
+        for i in range(10):
+            x_encoded_split = x_encoded[(500 * i):(500 * (i+1))]
+            gm = GaussianMixture(n_components=1, random_state=0).fit(x_encoded_split.cpu().detach().numpy())
+        #gm = GaussianMixture(n_components=1, random_state=0).fit(x_encoded.cpu().detach().numpy())
+            gm_list.append(gm)
 
 
 @torch.no_grad()
@@ -537,7 +559,7 @@ def evaluate_till_now_new(model: torch.nn.Module, original_model: torch.nn.Modul
 
     return test_stats
 def train_and_evaluate_new(model: torch.nn.Module, original_model: torch.nn.Module, task_model, 
-                    criterion, data_loader: Iterable, optimizer: torch.optim.Optimizer, lr_scheduler, gm_list, device: torch.device, 
+                    criterion, data_loader: Iterable, dataloader_each_class: Iterable, optimizer: torch.optim.Optimizer, lr_scheduler, gm_list, device: torch.device, 
                     class_mask=None, args = None,):
     
     # create matrix to save end-of-task accuracies 
@@ -546,22 +568,22 @@ def train_and_evaluate_new(model: torch.nn.Module, original_model: torch.nn.Modu
     for task_id in range(args.num_tasks):
 
         #ags-cl
-        if task_id > 0:
-            freeze = {}
-            omega = None
-            for name, param in model.named_parameters():
-                if 'head' in name:
-                    key = name.split('.')[0]
+        # if task_id > 0:
+        #     freeze = {}
+        #     omega = None
+        #     for name, param in model.named_parameters():
+        #         if 'head' in name:
+        #             key = name.split('.')[0]
                     
-                    temp = torch.ones_like(param)
-                    temp = temp.reshape((temp.size(0), omega[prekey].size(0) , -1))
-                    temp[:, omega[prekey] == 0] = 0
-                    temp[omega[key] == 0] = 1
-                    freeze[key] = temp.reshape(param.shape)
-                else:
-                    continue
+        #             temp = torch.ones_like(param)
+        #             temp = temp.reshape((temp.size(0), omega[prekey].size(0) , -1))
+        #             temp[:, omega[prekey] == 0] = 0
+        #             temp[omega[key] == 0] = 1
+        #             freeze[key] = temp.reshape(param.shape)
+        #         else:
+        #             continue
 
-                prekey = key
+        #         prekey = key
         # Transfer previous learned prompt params to the new prompt
         if args.prompt_pool and args.shared_prompt_pool:
             if task_id > 0:
@@ -587,7 +609,7 @@ def train_and_evaluate_new(model: torch.nn.Module, original_model: torch.nn.Modu
         if task_id > 0 and args.reinit_optimizer:
             optimizer = create_optimizer(args, model)
         
-        sample_data(original_model=original_model, data_loader=data_loader[task_id]['train'], gm_list=gm_list, device=device, task_id=task_id, args=args)
+        sample_data(original_model=original_model, dataloader_each_class=dataloader_each_class[task_id]['train'], gm_list=gm_list, device=device, task_id=task_id, args=args)
 
         for epoch in range(args.epochs):
             
@@ -627,10 +649,10 @@ def train_and_evaluate_new(model: torch.nn.Module, original_model: torch.nn.Modu
                 f.write(json.dumps(log_stats) + '\n')
         
         #store old head model use ags-cl
-        head_old = deepcopy(model.head)
-        head_old.train()
-        for param in head_old.parameters():
-            param.requires_grad = False
+        # head_old = deepcopy(model.head)
+        # head_old.train()
+        # for param in head_old.parameters():
+        #     param.requires_grad = False
 
 
 

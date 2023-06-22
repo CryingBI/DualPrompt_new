@@ -21,7 +21,7 @@ from timm.models import create_model
 from timm.scheduler import create_scheduler
 from timm.optim import create_optimizer
 
-from datasets import build_continual_dataloader
+from datasets import build_continual_dataloader, build_dataset_each_class
 from engine import *
 import models
 from head_model import TaskClassifier
@@ -44,6 +44,8 @@ def main(args):
     cudnn.benchmark = True
 
     data_loader, class_mask = build_continual_dataloader(args)
+
+    dataloader_each_class, class_mask_2 = build_dataset_each_class(args)
 
     print(f"Creating original model: {args.model}")
     original_model = create_model(
@@ -147,7 +149,7 @@ def main(args):
     start_time = time.time()
 
     train_and_evaluate_new(model, original_model, task_model,
-                    criterion, data_loader, optimizer, lr_scheduler, gm_list,
+                    criterion, data_loader, dataloader_each_class, optimizer, lr_scheduler, gm_list,
                     device, class_mask, args)
 
     total_time = time.time() - start_time
