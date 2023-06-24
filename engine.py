@@ -288,8 +288,12 @@ def train_task_model(task_model: torch.nn.Module, device, gm_list, task_id=-1,):
     input_train = []
     target_train = []
     for i in range(len(gm_use)):
-        input, target = gm_use[i].sample(n_samples=500)
-        input = torch.from_numpy(input).float()
+        if i < 50:
+            input, target = gm_use[i].sample(n_samples=500)
+            input = torch.from_numpy(input).float()
+        else:
+            input, target = gm_use[i].sample(n_samples=1000)
+            input = torch.from_numpy(input).float()
         #target = torch.from_numpy(target).long()
         if i < 10:
             new_target = torch.Tensor([0]).expand(500).long()
@@ -302,15 +306,15 @@ def train_task_model(task_model: torch.nn.Module, device, gm_list, task_id=-1,):
         elif i >= 40 and i < 50:
             new_target = torch.Tensor([4]).expand(500).long()
         elif i >= 50 and i < 60:
-            new_target = torch.Tensor([5]).expand(500).long()
+            new_target = torch.Tensor([5]).expand(1000).long()
         elif i >= 60 and i < 70:
-            new_target = torch.Tensor([6]).expand(500).long()
+            new_target = torch.Tensor([6]).expand(1000).long()
         elif i >= 70 and i < 80:
-            new_target = torch.Tensor([7]).expand(500).long()
+            new_target = torch.Tensor([7]).expand(1000).long()
         elif i >= 80 and i < 90:
-            new_target = torch.Tensor([8]).expand(500).long()
+            new_target = torch.Tensor([8]).expand(1000).long()
         elif i >= 90 and i < 100:
-            new_target = torch.Tensor([9]).expand(500).long()    
+            new_target = torch.Tensor([9]).expand(1000).long()    
         input_train.append(input)
         target_train.append(new_target)
 
