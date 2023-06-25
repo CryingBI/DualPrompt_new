@@ -291,45 +291,45 @@ def train_task_model(task_model: torch.nn.Module, device, gm_list, task_id=-1,):
         
         #target = torch.from_numpy(target).long()
         if i < 10:
-            input, _ = gm_use[i].sample(n_samples=500)
+            input, _ = gm_use[i].sample(n_samples=1000)
             input = torch.from_numpy(input).float()
-            new_target = torch.Tensor([0]).expand(500).long()
+            new_target = torch.Tensor([0]).expand(1000).long()           #500
         elif i >= 10 and i < 20:
-            input, _ = gm_use[i].sample(n_samples=556)
+            input, _ = gm_use[i].sample(n_samples=1000)
             input = torch.from_numpy(input).float()
-            new_target = torch.Tensor([1]).expand(556).long()
+            new_target = torch.Tensor([1]).expand(1000).long()           #556
         elif i >= 20 and i < 30:
-            input, _ = gm_use[i].sample(n_samples=625)
+            input, _ = gm_use[i].sample(n_samples=1000)
             input = torch.from_numpy(input).float()
-            new_target = torch.Tensor([2]).expand(625).long()
+            new_target = torch.Tensor([2]).expand(1000).long()           #625
         elif i >= 30 and i < 40:
-            input, _ = gm_use[i].sample(n_samples=714)
+            input, _ = gm_use[i].sample(n_samples=1000)
             input = torch.from_numpy(input).float()
-            new_target = torch.Tensor([3]).expand(714).long()
+            new_target = torch.Tensor([3]).expand(1000).long()           #714
         elif i >= 40 and i < 50:
-            input, _ = gm_use[i].sample(n_samples=833)
+            input, _ = gm_use[i].sample(n_samples=1000)
             input = torch.from_numpy(input).float()
-            new_target = torch.Tensor([4]).expand(833).long()
+            new_target = torch.Tensor([4]).expand(1000).long()           #833
         elif i >= 50 and i < 60:
             input, _ = gm_use[i].sample(n_samples=1000)
             input = torch.from_numpy(input).float()
-            new_target = torch.Tensor([5]).expand(1000).long()
+            new_target = torch.Tensor([5]).expand(1000).long()          #1000
         elif i >= 60 and i < 70:
             input, _ = gm_use[i].sample(n_samples=1250)
             input = torch.from_numpy(input).float()
-            new_target = torch.Tensor([6]).expand(1250).long()
+            new_target = torch.Tensor([6]).expand(1250).long()          #1250
         elif i >= 70 and i < 80:
             input, _ = gm_use[i].sample(n_samples=1666)
             input = torch.from_numpy(input).float()
-            new_target = torch.Tensor([7]).expand(1666).long()
+            new_target = torch.Tensor([7]).expand(1666).long()          #1666
         elif i >= 80 and i < 90:
             input, _ = gm_use[i].sample(n_samples=2500)
             input = torch.from_numpy(input).float()
-            new_target = torch.Tensor([8]).expand(2500).long()
+            new_target = torch.Tensor([8]).expand(2500).long()          #2500
         elif i >= 90 and i < 100:
             input, _ = gm_use[i].sample(n_samples=5000)
             input = torch.from_numpy(input).float()
-            new_target = torch.Tensor([9]).expand(5000).long()    
+            new_target = torch.Tensor([9]).expand(5000).long()          #5000
         input_train.append(input)
         target_train.append(new_target)
 
