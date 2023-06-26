@@ -640,6 +640,7 @@ def train_and_evaluate_new(model: torch.nn.Module, original_model: torch.nn.Modu
                                             device=device, epoch=epoch, max_norm = args.clip_grad,
                                             set_training_mode=True, task_id=task_id, class_mask=class_mask,
                                             args=args)
+        for epoch in range(10):
             train_task_stat = train_task_model(task_model=task_model, device=device, gm_list=gm_list, task_id=task_id)
 
             if lr_scheduler:
