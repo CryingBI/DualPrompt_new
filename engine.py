@@ -275,7 +275,7 @@ def train_task_model(task_model: torch.nn.Module, device, gm_list, task_id=-1,):
     task_model.train()
 
     loss_fn = nn.CrossEntropyLoss()
-    optimizer = torch.optim.Adam(task_model.parameters(), lr=1e-3)
+    optimizer = torch.optim.Adam(task_model.parameters(), lr=0.01)
 
     # metric_logger = utils.MetricLogger(delimiter="  ")
     # metric_logger.add_meter('Lr', utils.SmoothedValue(window_size=1, fmt='{value:.6f}'))
