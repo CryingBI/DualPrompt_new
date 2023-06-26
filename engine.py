@@ -633,13 +633,13 @@ def train_and_evaluate_new(model: torch.nn.Module, original_model: torch.nn.Modu
         
         sample_data(original_model=original_model, dataloader_each_class=dataloader_each_class[task_id]['train_each_class'], gm_list=gm_list, device=device, task_id=task_id, args=args)
 
-        for epoch in range(args.epochs):
+        # for epoch in range(args.epochs):
             
-            train_simple_stat = train_simple_model(model=model, criterion=criterion,
-                                            data_loader=data_loader[task_id]['train'], optimizer=optimizer,
-                                            device=device, epoch=epoch, max_norm = args.clip_grad,
-                                            set_training_mode=True, task_id=task_id, class_mask=class_mask,
-                                            args=args)
+        #     train_simple_stat = train_simple_model(model=model, criterion=criterion,
+        #                                     data_loader=data_loader[task_id]['train'], optimizer=optimizer,
+        #                                     device=device, epoch=epoch, max_norm = args.clip_grad,
+        #                                     set_training_mode=True, task_id=task_id, class_mask=class_mask,
+        #                                     args=args)
         for epoch in range(10):
             train_task_stat = train_task_model(task_model=task_model, device=device, gm_list=gm_list, task_id=task_id)
 
@@ -663,13 +663,13 @@ def train_and_evaluate_new(model: torch.nn.Module, original_model: torch.nn.Modu
             
             utils.save_on_master(state_dict, checkpoint_path)
 
-        log_stats = {**{f'train_{k}': v for k, v in train_simple_stat.items()},
-            **{f'test_{k}': v for k, v in test_stat.items()},
-            'epoch': epoch,}
+        # log_stats = {**{f'train_{k}': v for k, v in train_simple_stat.items()},
+        #     **{f'test_{k}': v for k, v in test_stat.items()},
+        #     'epoch': epoch,}
 
-        if args.output_dir and utils.is_main_process():
-            with open(os.path.join(args.output_dir, '{}_stats.txt'.format(datetime.datetime.now().strftime('log_%Y_%m_%d_%H_%M'))), 'a') as f:
-                f.write(json.dumps(log_stats) + '\n')
+        # if args.output_dir and utils.is_main_process():
+        #     with open(os.path.join(args.output_dir, '{}_stats.txt'.format(datetime.datetime.now().strftime('log_%Y_%m_%d_%H_%M'))), 'a') as f:
+        #         f.write(json.dumps(log_stats) + '\n')
         
         #store old head model use ags-cl
         # head_old = deepcopy(model.head)
