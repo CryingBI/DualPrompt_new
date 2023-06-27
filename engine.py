@@ -275,7 +275,7 @@ def train_task_model(task_model: torch.nn.Module, device, gm_list, task_id=-1,):
     task_model.train()
 
     loss_fn = nn.CrossEntropyLoss()
-    optimizer = torch.optim.Adam(task_model.parameters(), lr=2e-4)
+    optimizer = torch.optim.Adam(task_model.parameters(), lr=1e-3)
 
     # metric_logger = utils.MetricLogger(delimiter="  ")
     # metric_logger.add_meter('Lr', utils.SmoothedValue(window_size=1, fmt='{value:.6f}'))
@@ -607,24 +607,24 @@ def train_and_evaluate_new(model: torch.nn.Module, original_model: torch.nn.Modu
 
         #         prekey = key
         # Transfer previous learned prompt params to the new prompt
-        if args.prompt_pool and args.shared_prompt_pool:
-            if task_id > 0:
-                prev_start = (task_id - 1) * args.top_k
-                prev_end = task_id * args.top_k
+        # if args.prompt_pool and args.shared_prompt_pool:
+        #     if task_id > 0:
+        #         prev_start = (task_id - 1) * args.top_k
+        #         prev_end = task_id * args.top_k
 
-                cur_start = prev_end
-                cur_end = (task_id + 1) * args.top_k
+        #         cur_start = prev_end
+        #         cur_end = (task_id + 1) * args.top_k
 
-                if (prev_end > args.size) or (cur_end > args.size):
-                    pass
-                else:
-                    cur_idx = (slice(None), slice(None), slice(cur_start, cur_end)) if args.use_prefix_tune_for_e_prompt else (slice(None), slice(cur_start, cur_end))
-                    prev_idx = (slice(None), slice(None), slice(prev_start, prev_end)) if args.use_prefix_tune_for_e_prompt else (slice(None), slice(prev_start, prev_end))
+        #         if (prev_end > args.size) or (cur_end > args.size):
+        #             pass
+        #         else:
+        #             cur_idx = (slice(None), slice(None), slice(cur_start, cur_end)) if args.use_prefix_tune_for_e_prompt else (slice(None), slice(cur_start, cur_end))
+        #             prev_idx = (slice(None), slice(None), slice(prev_start, prev_end)) if args.use_prefix_tune_for_e_prompt else (slice(None), slice(prev_start, prev_end))
 
-                    with torch.no_grad():
-                        model.e_prompt.grad.zero_()
-                        model.e_prompt[cur_idx] = model.e_prompt[prev_idx]
-                        optimizer.param_groups[0]['params'] = model.parameters()
+        #             with torch.no_grad():
+        #                 model.e_prompt.grad.zero_()
+        #                 model.e_prompt[cur_idx] = model.e_prompt[prev_idx]
+        #                 optimizer.param_groups[0]['params'] = model.parameters()
         
      
         # Create new optimizer for each task to clear optimizer status
@@ -640,7 +640,7 @@ def train_and_evaluate_new(model: torch.nn.Module, original_model: torch.nn.Modu
         #                                     device=device, epoch=epoch, max_norm = args.clip_grad,
         #                                     set_training_mode=True, task_id=task_id, class_mask=class_mask,
         #                                     args=args)
-        for epoch in range(10):
+        for epoch in range(50):
             train_task_stat = train_task_model(task_model=task_model, device=device, gm_list=gm_list, task_id=task_id)
 
             if lr_scheduler:
