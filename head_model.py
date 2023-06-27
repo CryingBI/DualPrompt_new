@@ -16,10 +16,10 @@ class TaskClassifier(nn.Module):
         #                                 nn.Dropout(0.5),
         #                                 nn.Linear(256, 10)).cuda()
         
-        self.classifier = nn.Sequential(nn.Linear(768, 384), 
+        self.classifier = nn.Sequential(nn.Linear(768, 512), 
                                         nn.ReLU(inplace=True), 
-                                        nn.Linear(384, 384),
+                                        nn.Linear(512, 512),
                                         nn.ReLU(inplace=True),
-                                        nn.Linear(384, 10)).cuda()
+                                        nn.Linear(512, 10)).cuda()
     def forward(self, x):
         return self.classifier(x)
