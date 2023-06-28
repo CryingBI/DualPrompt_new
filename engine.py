@@ -274,7 +274,7 @@ def train_task_model(task_model: torch.nn.Module, device, gm_list, epoch, task_i
 
     running_loss = 0.0
     task_model.train()
-    lr = 2e-5
+    lr = 2.5e-5
     loss_fn = nn.CrossEntropyLoss()
     optimizer = torch.optim.Adam(task_model.parameters(), lr=lr)
 
