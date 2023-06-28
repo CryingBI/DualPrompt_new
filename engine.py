@@ -270,12 +270,13 @@ def train_and_evaluate(model: torch.nn.Module, model_without_ddp: torch.nn.Modul
                 f.write(json.dumps(log_stats) + '\n')
 
 
-def train_task_model(task_model: torch.nn.Module, device, gm_list, task_id=-1,):
-    
-    task_model.train()
+def train_task_model(task_model: torch.nn.Module, device, gm_list, epoch, task_id=-1,):
 
+    running_loss = 0.0
+    task_model.train()
+    lr = 2e-5
     loss_fn = nn.CrossEntropyLoss()
-    optimizer = torch.optim.Adam(task_model.parameters(), lr=1e-3)
+    optimizer = torch.optim.Adam(task_model.parameters(), lr=lr)
 
     # metric_logger = utils.MetricLogger(delimiter="  ")
     # metric_logger.add_meter('Lr', utils.SmoothedValue(window_size=1, fmt='{value:.6f}'))
@@ -284,7 +285,7 @@ def train_task_model(task_model: torch.nn.Module, device, gm_list, task_id=-1,):
     
     gm_use = gm_list[:10*(task_id+1)]
     #gm_use = gm_list[task_id]
-    print("len gm_use",len(gm_use))
+    #print("len gm_use",len(gm_use))
     input_train = []
     target_train = []
     for i in range(len(gm_use)):
@@ -340,6 +341,9 @@ def train_task_model(task_model: torch.nn.Module, device, gm_list, task_id=-1,):
     train_dataloader = DataLoader(train_dataset, batch_size=16, shuffle=True)
 
     for batch, (input, target) in enumerate(train_dataloader):
+
+        optimizer.zero_grad()
+
         input, target = input.to(device), target.to(device)
 
         pred = task_model(input)
@@ -352,12 +356,14 @@ def train_task_model(task_model: torch.nn.Module, device, gm_list, task_id=-1,):
 
         loss.backward()
         optimizer.step()
-        optimizer.zero_grad()
+        
+        running_loss += loss.item()
+        # if batch % 20 == 0:
+        #     loss, current = loss.item(), (batch + 1) * len(input)
+        #     print(f"Train_task_model: [Task {task_id + 1}] with loss: {loss:>7f} {current:>5d}")
 
-        if batch % 20 == 0:
-            loss, current = loss.item(), (batch + 1) * len(input)
-            print(f"Train_task_model: [Task {task_id + 1}] with loss: {loss:>7f} {current:>5d}")
-    
+    epoch_loss = running_loss / len(train_dataloader)
+    print(f"Lr: {lr}, Epoch {epoch+1}/{100}, Loss: {epoch_loss:.7f}")
 
 def train_simple_model(model: torch.nn.Module, 
                     criterion, data_loader: Iterable, optimizer: torch.optim.Optimizer,
@@ -640,8 +646,12 @@ def train_and_evaluate_new(model: torch.nn.Module, original_model: torch.nn.Modu
         #                                     device=device, epoch=epoch, max_norm = args.clip_grad,
         #                                     set_training_mode=True, task_id=task_id, class_mask=class_mask,
         #                                     args=args)
-        for epoch in range(20):
-            train_task_stat = train_task_model(task_model=task_model, device=device, gm_list=gm_list, task_id=task_id)
+        if task_id == 0:
+            for epoch in range(10):
+                train_task_stat = train_task_model(task_model=task_model, device=device, gm_list=gm_list, epoch=epoch, task_id=task_id)
+        else:
+            for epoch in range(100):
+                train_task_stat = train_task_model(task_model=task_model, device=device, gm_list=gm_list, epoch=epoch, task_id=task_id)
 
             if lr_scheduler:
                 lr_scheduler.step(epoch)
