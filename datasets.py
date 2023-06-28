@@ -80,10 +80,10 @@ def build_dataset_each_class(args):
 
                 dataset_train_each_class = split_datasets_each_class[i]
 
-            sampler_train_each_class = torch.utils.data.RandomSampler(dataset_train_each_class)
+            #sampler_train_each_class = torch.utils.data.RandomSampler(dataset_train_each_class)
 
             data_loader_train_each_class = torch.utils.data.DataLoader(
-                dataset_train_each_class, sampler=sampler_train_each_class,
+                dataset_train_each_class,
                 batch_size=args.batch_size,
                 num_workers=args.num_workers,
                 pin_memory=args.pin_mem,
