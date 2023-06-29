@@ -27,6 +27,7 @@ from sklearn.mixture import GaussianMixture
 from sklearn.decomposition import PCA
 from torch.utils.data import DataLoader, TensorDataset
 import torch.nn.functional as F
+import torch.optim.lr_scheduler as lr_scheduler
 
 from copy import deepcopy
 import utils
@@ -270,100 +271,88 @@ def train_and_evaluate(model: torch.nn.Module, model_without_ddp: torch.nn.Modul
                 f.write(json.dumps(log_stats) + '\n')
 
 
-def train_task_model(task_model: torch.nn.Module, device, gm_list, epoch, task_id=-1,):
+def train_task_model(task_model: torch.nn.Module, device, gm_list, epochs, task_id=-1,):
 
-    running_loss = 0.0
     task_model.train()
-    lr = 2.5e-5
+
+    #training_data = [[] for e_id in range(epochs)]
+    data_loader_data = []
+    lr = 1e-3
     loss_fn = nn.CrossEntropyLoss()
     optimizer = torch.optim.Adam(task_model.parameters(), lr=lr)
+    scheduler = lr_scheduler.StepLR(optimizer, step_size=80, gamma=0.01)
 
-    # metric_logger = utils.MetricLogger(delimiter="  ")
-    # metric_logger.add_meter('Lr', utils.SmoothedValue(window_size=1, fmt='{value:.6f}'))
-    # metric_logger.add_meter('Loss', utils.SmoothedValue(window_size=1, fmt='{value:.4f}'))
-    # header = 'Train_task_model: [Task {}]'.format(task_id + 1)
-    
     gm_use = gm_list[:10*(task_id+1)]
-    #gm_use = gm_list[task_id]
-    #print("len gm_use",len(gm_use))
     input_train = []
     target_train = []
     for i in range(len(gm_use)):
-        
+        input, _ = gm_use[i].sample(n_samples=128*200)
+        input = torch.from_numpy(input).float()
         #target = torch.from_numpy(target).long()
         if i < 10:
-            input, _ = gm_use[i].sample(n_samples=128)
-            input = torch.from_numpy(input).float()
-            new_target = torch.Tensor([0]).expand(128).long()           #500
+            new_target = torch.Tensor([0]).expand(128*200).long()           #500
         elif i >= 10 and i < 20:
-            input, _ = gm_use[i].sample(n_samples=128)
-            input = torch.from_numpy(input).float()
-            new_target = torch.Tensor([1]).expand(128).long()           #556
+            new_target = torch.Tensor([1]).expand(128*200).long()           #556
         elif i >= 20 and i < 30:
-            input, _ = gm_use[i].sample(n_samples=128)
-            input = torch.from_numpy(input).float()
-            new_target = torch.Tensor([2]).expand(128).long()           #625
+            new_target = torch.Tensor([2]).expand(128*200).long()           #625
         elif i >= 30 and i < 40:
-            input, _ = gm_use[i].sample(n_samples=128)
-            input = torch.from_numpy(input).float()
-            new_target = torch.Tensor([3]).expand(128).long()           #714
+            new_target = torch.Tensor([3]).expand(128*200).long()           #714
         elif i >= 40 and i < 50:
-            input, _ = gm_use[i].sample(n_samples=128)
-            input = torch.from_numpy(input).float()
-            new_target = torch.Tensor([4]).expand(128).long()           #833
+            new_target = torch.Tensor([4]).expand(128*200).long()           #833
         elif i >= 50 and i < 60:
-            input, _ = gm_use[i].sample(n_samples=128)
-            input = torch.from_numpy(input).float()
-            new_target = torch.Tensor([5]).expand(128).long()          #1280
+            new_target = torch.Tensor([5]).expand(128*200).long()          #128*2000
         elif i >= 60 and i < 70:
-            input, _ = gm_use[i].sample(n_samples=128)
-            input = torch.from_numpy(input).float()
-            new_target = torch.Tensor([6]).expand(128).long()          #1250
+            new_target = torch.Tensor([6]).expand(128*200).long()          #1250
         elif i >= 70 and i < 80:
-            input, _ = gm_use[i].sample(n_samples=128)
-            input = torch.from_numpy(input).float()
-            new_target = torch.Tensor([7]).expand(128).long()          #1666
+            new_target = torch.Tensor([7]).expand(128*200).long()          #1666
         elif i >= 80 and i < 90:
-            input, _ = gm_use[i].sample(n_samples=128)
-            input = torch.from_numpy(input).float()
-            new_target = torch.Tensor([8]).expand(128).long()          #2500
+            new_target = torch.Tensor([8]).expand(128*200).long()          #2500
         elif i >= 90 and i < 100:
-            input, _ = gm_use[i].sample(n_samples=128)
-            input = torch.from_numpy(input).float()
-            new_target = torch.Tensor([9]).expand(128).long()          #5000
+            new_target = torch.Tensor([9]).expand(128*200).long()          #5000
         input_train.append(input)
         target_train.append(new_target)
 
     input_train = torch.cat(input_train, dim=0)
     target_train = torch.cat(target_train, dim=0)
+    
+    for e_id in range(epochs):
 
-    train_dataset = TensorDataset(input_train, target_train)
-    train_dataloader = DataLoader(train_dataset, batch_size=16, shuffle=True)
-
-    for batch, (input, target) in enumerate(train_dataloader):
-
-        optimizer.zero_grad()
-
-        input, target = input.to(device), target.to(device)
-
-        pred = task_model(input)
-        # prob = F.softmax(pred, dim=1)
-
-        # task_id_infer = torch.argmax(prob, dim=1)
-        # task_id_infer = task_id_infer.to(device, non_blocking=True)
-
-        loss = loss_fn(pred, target)
-
-        loss.backward()
-        optimizer.step()
+        input_train_raw = []
+        target_train_raw = []
+        for i in range(len(gm_use)):
+            input_raw, target_raw = input_train[128*e_id+128*200*i : 128*(e_id+1)+128*200*i], target_train[128*e_id+128*200*i : 128*(e_id+1)+128*200*i]
+            input_train_raw.append(input_raw)
+            target_train_raw.append(target_raw)
         
-        running_loss += loss.item()
-        # if batch % 20 == 0:
-        #     loss, current = loss.item(), (batch + 1) * len(input)
-        #     print(f"Train_task_model: [Task {task_id + 1}] with loss: {loss:>7f} {current:>5d}")
+        input_train_raw = torch.cat(input_train_raw, dim=0)
+        target_train_raw = torch.cat(target_train_raw, dim=0)
 
-    epoch_loss = running_loss / len(train_dataloader)
-    print(f"Lr: {lr}, Epoch {epoch+1}/{100}, Loss: {epoch_loss:.7f}")
+        train_dataset = TensorDataset(input_train_raw, target_train_raw)
+        train_dataloader = DataLoader(train_dataset, batch_size=16, shuffle=True)
+        data_loader_data.append(train_dataloader)
+
+    def train_data(train_dataloader, scheduler, e_id):
+
+        running_loss = 0.0
+
+        for batch, (input, target) in enumerate(train_dataloader):
+            optimizer.zero_grad()
+            input, target = input.to(device), target.to(device)
+            pred = task_model(input)
+            loss = loss_fn(pred, target)
+            loss.backward()
+
+            torch.nn.utils.clip_grad_norm_(task_model.parameters(), 10)
+
+            optimizer.step()
+            
+            running_loss += loss.item()
+        scheduler.step()
+        epoch_loss = running_loss / len(train_dataloader)
+        print(f"Lr: {scheduler.get_lr()[0]}, Epoch {e_id+1}/{200}, Loss: {epoch_loss:.7f}")
+    
+    for e_id in range(epochs):
+        train_data(data_loader_data[e_id], scheduler, e_id)
 
 def train_simple_model(model: torch.nn.Module, 
                     criterion, data_loader: Iterable, optimizer: torch.optim.Optimizer,
@@ -646,15 +635,10 @@ def train_and_evaluate_new(model: torch.nn.Module, original_model: torch.nn.Modu
         #                                     device=device, epoch=epoch, max_norm = args.clip_grad,
         #                                     set_training_mode=True, task_id=task_id, class_mask=class_mask,
         #                                     args=args)
-        if task_id == 0:
-            for epoch in range(10):
-                train_task_stat = train_task_model(task_model=task_model, device=device, gm_list=gm_list, epoch=epoch, task_id=task_id)
-        else:
-            for epoch in range(100):
-                train_task_stat = train_task_model(task_model=task_model, device=device, gm_list=gm_list, epoch=epoch, task_id=task_id)
+            # if lr_scheduler:
+            #     lr_scheduler.step(epoch)
+        train_task_model(task_model=task_model, device=device, gm_list=gm_list, epochs=200, task_id=task_id)
 
-            if lr_scheduler:
-                lr_scheduler.step(epoch)
         test_stat = evaluate_till_now_new(model=model, original_model=original_model, task_model=task_model, data_loader=data_loader, device=device,
                                         task_id=task_id, class_mask=class_mask, acc_matrix=acc_matrix, args=args,)
         
@@ -665,7 +649,7 @@ def train_and_evaluate_new(model: torch.nn.Module, original_model: torch.nn.Modu
             state_dict = {
                     'model': model.state_dict(),
                     'optimizer': optimizer.state_dict(),
-                    'epoch': epoch,
+                    #'epoch': epoch,
                     'args': args,
                 }
             if args.sched is not None and args.sched != 'constant':
