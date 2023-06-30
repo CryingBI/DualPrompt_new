@@ -277,38 +277,38 @@ def train_task_model(task_model: torch.nn.Module, device, gm_list, epochs, task_
 
     #training_data = [[] for e_id in range(epochs)]
     data_loader_data = []
-    lr = 1e-3
+    lr = 3e-4
     loss_fn = nn.CrossEntropyLoss()
     optimizer = torch.optim.Adam(task_model.parameters(), lr=lr)
-    scheduler = lr_scheduler.StepLR(optimizer, step_size=80, gamma=0.01)
+    scheduler = lr_scheduler.LinearLR(optimizer, start_factor=1.0, end_factor=0.1, total_iters=100)
 
     gm_use = gm_list[:10*(task_id+1)]
     input_train = []
     target_train = []
     for i in range(len(gm_use)):
-        input, _ = gm_use[i].sample(n_samples=128*200)
+        input, _ = gm_use[i].sample(n_samples=128*90)
         input = torch.from_numpy(input).float()
         #target = torch.from_numpy(target).long()
         if i < 10:
-            new_target = torch.Tensor([0]).expand(128*200).long()           #500
+            new_target = torch.Tensor([0]).expand(128*90).long()           #500
         elif i >= 10 and i < 20:
-            new_target = torch.Tensor([1]).expand(128*200).long()           #556
+            new_target = torch.Tensor([1]).expand(128*90).long()           #556
         elif i >= 20 and i < 30:
-            new_target = torch.Tensor([2]).expand(128*200).long()           #625
+            new_target = torch.Tensor([2]).expand(128*90).long()           #625
         elif i >= 30 and i < 40:
-            new_target = torch.Tensor([3]).expand(128*200).long()           #714
+            new_target = torch.Tensor([3]).expand(128*90).long()           #714
         elif i >= 40 and i < 50:
-            new_target = torch.Tensor([4]).expand(128*200).long()           #833
+            new_target = torch.Tensor([4]).expand(128*90).long()           #833
         elif i >= 50 and i < 60:
-            new_target = torch.Tensor([5]).expand(128*200).long()          #128*2000
+            new_target = torch.Tensor([5]).expand(128*90).long()          #128*900
         elif i >= 60 and i < 70:
-            new_target = torch.Tensor([6]).expand(128*200).long()          #1250
+            new_target = torch.Tensor([6]).expand(128*90).long()          #1250
         elif i >= 70 and i < 80:
-            new_target = torch.Tensor([7]).expand(128*200).long()          #1666
+            new_target = torch.Tensor([7]).expand(128*90).long()          #1666
         elif i >= 80 and i < 90:
-            new_target = torch.Tensor([8]).expand(128*200).long()          #2500
+            new_target = torch.Tensor([8]).expand(128*90).long()          #2500
         elif i >= 90 and i < 100:
-            new_target = torch.Tensor([9]).expand(128*200).long()          #5000
+            new_target = torch.Tensor([9]).expand(128*90).long()          #5000
         input_train.append(input)
         target_train.append(new_target)
 
@@ -320,7 +320,7 @@ def train_task_model(task_model: torch.nn.Module, device, gm_list, epochs, task_
         input_train_raw = []
         target_train_raw = []
         for i in range(len(gm_use)):
-            input_raw, target_raw = input_train[128*e_id+128*200*i : 128*(e_id+1)+128*200*i], target_train[128*e_id+128*200*i : 128*(e_id+1)+128*200*i]
+            input_raw, target_raw = input_train[128*e_id+128*90*i : 128*(e_id+1)+128*90*i], target_train[128*e_id+128*90*i : 128*(e_id+1)+128*90*i]
             input_train_raw.append(input_raw)
             target_train_raw.append(target_raw)
         
@@ -349,7 +349,7 @@ def train_task_model(task_model: torch.nn.Module, device, gm_list, epochs, task_
             running_loss += loss.item()
         scheduler.step()
         epoch_loss = running_loss / len(train_dataloader)
-        print(f"Lr: {scheduler.get_lr()[0]}, Epoch {e_id+1}/{200}, Loss: {epoch_loss:.7f}")
+        print(f"Lr: {scheduler.get_lr()[0]}, Epoch {e_id+1}/{100}, Loss: {epoch_loss:.7f}")
     
     for e_id in range(epochs):
         train_data(data_loader_data[e_id], scheduler, e_id)
@@ -637,7 +637,7 @@ def train_and_evaluate_new(model: torch.nn.Module, original_model: torch.nn.Modu
         #                                     args=args)
             # if lr_scheduler:
             #     lr_scheduler.step(epoch)
-        train_task_model(task_model=task_model, device=device, gm_list=gm_list, epochs=200, task_id=task_id)
+        train_task_model(task_model=task_model, device=device, gm_list=gm_list, epochs=90, task_id=task_id)
 
         test_stat = evaluate_till_now_new(model=model, original_model=original_model, task_model=task_model, data_loader=data_loader, device=device,
                                         task_id=task_id, class_mask=class_mask, acc_matrix=acc_matrix, args=args,)
