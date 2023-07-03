@@ -330,6 +330,7 @@ def train_task_model(task_model: torch.nn.Module, device, gm_list, epochs, task_
         train_dataset = TensorDataset(input_train_raw, target_train_raw)
         train_dataloader = DataLoader(train_dataset, batch_size=16, shuffle=True)
         data_loader_data.append(train_dataloader)
+        print(len(data_loader_data))
 
     def train_data(train_dataloader, scheduler, e_id):
 
