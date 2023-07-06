@@ -277,7 +277,7 @@ def train_task_model(task_model: torch.nn.Module, device, gm_list, epochs, task_
 
     #training_data = [[] for e_id in range(epochs)]
     data_loader_data = []
-    lr = 1e-3
+    lr = 5e-3
     loss_fn = nn.CrossEntropyLoss()
     optimizer = torch.optim.Adam(task_model.parameters(), lr=lr)
     scheduler = lr_scheduler.LinearLR(optimizer, start_factor=1.0, end_factor=0.005, total_iters=90)
@@ -629,15 +629,15 @@ def train_and_evaluate_new(model: torch.nn.Module, original_model: torch.nn.Modu
         
         sample_data(original_model=original_model, dataloader_each_class=dataloader_each_class[task_id]['train_each_class'], gm_list=gm_list, device=device, task_id=task_id, args=args)
 
-        # for epoch in range(args.epochs):
+        for epoch in range(args.epochs):
             
-        #     train_simple_stat = train_simple_model(model=model, criterion=criterion,
-        #                                     data_loader=data_loader[task_id]['train'], optimizer=optimizer,
-        #                                     device=device, epoch=epoch, max_norm = args.clip_grad,
-        #                                     set_training_mode=True, task_id=task_id, class_mask=class_mask,
-        #                                     args=args)
-            # if lr_scheduler:
-            #     lr_scheduler.step(epoch)
+            train_simple_stat = train_simple_model(model=model, criterion=criterion,
+                                            data_loader=data_loader[task_id]['train'], optimizer=optimizer,
+                                            device=device, epoch=epoch, max_norm = args.clip_grad,
+                                            set_training_mode=True, task_id=task_id, class_mask=class_mask,
+                                            args=args)
+            if lr_scheduler:
+                lr_scheduler.step(epoch)
         train_task_model(task_model=task_model, device=device, gm_list=gm_list, epochs=90, task_id=task_id)
 
         test_stat = evaluate_till_now_new(model=model, original_model=original_model, task_model=task_model, data_loader=data_loader, device=device,
@@ -650,7 +650,7 @@ def train_and_evaluate_new(model: torch.nn.Module, original_model: torch.nn.Modu
             state_dict = {
                     'model': model.state_dict(),
                     'optimizer': optimizer.state_dict(),
-                    #'epoch': epoch,
+                    'epoch': epoch,
                     'args': args,
                 }
             if args.sched is not None and args.sched != 'constant':
@@ -658,13 +658,13 @@ def train_and_evaluate_new(model: torch.nn.Module, original_model: torch.nn.Modu
             
             utils.save_on_master(state_dict, checkpoint_path)
 
-        # log_stats = {**{f'train_{k}': v for k, v in train_simple_stat.items()},
-        #     **{f'test_{k}': v for k, v in test_stat.items()},
-        #     'epoch': epoch,}
+        log_stats = {**{f'train_{k}': v for k, v in train_simple_stat.items()},
+            **{f'test_{k}': v for k, v in test_stat.items()},
+            'epoch': epoch,}
 
-        # if args.output_dir and utils.is_main_process():
-        #     with open(os.path.join(args.output_dir, '{}_stats.txt'.format(datetime.datetime.now().strftime('log_%Y_%m_%d_%H_%M'))), 'a') as f:
-        #         f.write(json.dumps(log_stats) + '\n')
+        if args.output_dir and utils.is_main_process():
+            with open(os.path.join(args.output_dir, '{}_stats.txt'.format(datetime.datetime.now().strftime('log_%Y_%m_%d_%H_%M'))), 'a') as f:
+                f.write(json.dumps(log_stats) + '\n')
         
         #store old head model use ags-cl
         # head_old = deepcopy(model.head)
