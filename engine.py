@@ -277,7 +277,7 @@ def train_task_model(task_model: torch.nn.Module, device, gm_list, epochs, task_
 
     #training_data = [[] for e_id in range(epochs)]
     data_loader_data = []
-    lr = 3e-2
+    lr = 1.5e-2
     loss_fn = nn.CrossEntropyLoss()
     optimizer = torch.optim.Adam(task_model.parameters(), lr=lr)
     scheduler = lr_scheduler.LinearLR(optimizer, start_factor=1.0, end_factor=0.1, total_iters=90)
@@ -350,7 +350,7 @@ def train_task_model(task_model: torch.nn.Module, device, gm_list, epochs, task_
             running_loss += loss.item()
         scheduler.step()
         epoch_loss = running_loss / len(train_dataloader)
-        print(f"Lr: {scheduler.get_lr()[0]}, Epoch {e_id+1}/{100}, Loss: {epoch_loss:.7f}")
+        print(f"Lr: {scheduler.get_lr()[0]}, Epoch {e_id+1}/{90}, Loss: {epoch_loss:.7f}")
     
     for e_id in range(epochs):
         train_data(data_loader_data[e_id], scheduler, e_id)
