@@ -277,38 +277,38 @@ def train_task_model(task_model: torch.nn.Module, device, gm_list, epochs, task_
 
     #training_data = [[] for e_id in range(epochs)]
     data_loader_data = []
-    lr = 2.7e-4
+    lr = 2.6e-4
     loss_fn = nn.CrossEntropyLoss()
     optimizer = torch.optim.Adam(task_model.parameters(), lr=lr)
-    scheduler = lr_scheduler.LinearLR(optimizer, start_factor=1.0, end_factor=0.04, total_iters=90)
+    scheduler = lr_scheduler.LinearLR(optimizer, start_factor=1.0, end_factor=0.02, total_iters=90)
 
     gm_use = gm_list[:10*(task_id+1)]
     input_train = []
     target_train = []
     for i in range(len(gm_use)):
-        input, _ = gm_use[i].sample(n_samples=256*90)
+        input, _ = gm_use[i].sample(n_samples=128*90)
         input = torch.from_numpy(input).float()
         #target = torch.from_numpy(target).long()
         if i < 10:
-            new_target = torch.Tensor([0]).expand(256*90).long()           #500
+            new_target = torch.Tensor([0]).expand(128*90).long()           #500
         elif i >= 10 and i < 20:
-            new_target = torch.Tensor([1]).expand(256*90).long()           #556
+            new_target = torch.Tensor([1]).expand(128*90).long()           #556
         elif i >= 20 and i < 30:
-            new_target = torch.Tensor([2]).expand(256*90).long()           #625
+            new_target = torch.Tensor([2]).expand(128*90).long()           #625
         elif i >= 30 and i < 40:
-            new_target = torch.Tensor([3]).expand(256*90).long()           #714
+            new_target = torch.Tensor([3]).expand(128*90).long()           #714
         elif i >= 40 and i < 50:
-            new_target = torch.Tensor([4]).expand(256*90).long()           #833
+            new_target = torch.Tensor([4]).expand(128*90).long()           #833
         elif i >= 50 and i < 60:
-            new_target = torch.Tensor([5]).expand(256*90).long()          #256*900
+            new_target = torch.Tensor([5]).expand(128*90).long()          #128*900
         elif i >= 60 and i < 70:
-            new_target = torch.Tensor([6]).expand(256*90).long()          #1250
+            new_target = torch.Tensor([6]).expand(128*90).long()          #1250
         elif i >= 70 and i < 80:
-            new_target = torch.Tensor([7]).expand(256*90).long()          #1666
+            new_target = torch.Tensor([7]).expand(128*90).long()          #1666
         elif i >= 80 and i < 90:
-            new_target = torch.Tensor([8]).expand(256*90).long()          #2500
+            new_target = torch.Tensor([8]).expand(128*90).long()          #2500
         elif i >= 90 and i < 100:
-            new_target = torch.Tensor([9]).expand(256*90).long()          #5000
+            new_target = torch.Tensor([9]).expand(128*90).long()          #5000
         input_train.append(input)
         target_train.append(new_target)
 
@@ -320,7 +320,7 @@ def train_task_model(task_model: torch.nn.Module, device, gm_list, epochs, task_
         input_train_raw = []
         target_train_raw = []
         for i in range(len(gm_use)):
-            input_raw, target_raw = input_train[256*e_id+256*90*i : 256*(e_id+1)+256*90*i], target_train[256*e_id+256*90*i : 256*(e_id+1)+256*90*i]
+            input_raw, target_raw = input_train[128*e_id+128*90*i : 128*(e_id+1)+128*90*i], target_train[128*e_id+128*90*i : 128*(e_id+1)+128*90*i]
             input_train_raw.append(input_raw)
             target_train_raw.append(target_raw)
         
