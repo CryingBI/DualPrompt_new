@@ -283,7 +283,11 @@ def train_task_model(task_model: torch.nn.Module, device, gm_list, epochs, args,
 
     if args.dataset == "Split-CIFAR100":
         gm_use = gm_list[:10*(task_id+1)]
+
         lr = 7e-5
+        optimizer = torch.optim.Adam(task_model.parameters(), lr=lr)
+        scheduler = lr_scheduler.LinearLR(optimizer, start_factor=1.0, end_factor=0.005, total_iters=90)
+
         input_train = []
         target_train = []
         for i in range(len(gm_use)):
@@ -358,7 +362,11 @@ def train_task_model(task_model: torch.nn.Module, device, gm_list, epochs, args,
 
     else:
         gm_use = gm_list[:(task_id+1)]
+
         lr = 1e-3
+        optimizer = torch.optim.Adam(task_model.parameters(), lr=lr)
+        scheduler = lr_scheduler.LinearLR(optimizer, start_factor=1.0, end_factor=0.005, total_iters=90)
+        
         input_train = []
         target_train = []
         print("len gm", len(gm_use))
