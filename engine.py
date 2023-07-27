@@ -360,9 +360,11 @@ def train_task_model(task_model: torch.nn.Module, device, gm_list, epochs, args,
         gm_use = gm_list[:(task_id+1)]
         input_train = []
         target_train = []
+        print("len gm", len(gm_use))
         for i in range(len(gm_use)):
             input, _ = gm_use[i].sample(n_samples=128*90)
             input = torch.from_numpy(input).float()
+            print("input shape", input.shape)
             new_target = torch.Tensor([i]).expand(128*90).long()
 
             input_train.append(input)
