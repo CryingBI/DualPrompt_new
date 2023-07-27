@@ -585,42 +585,25 @@ def train_and_evaluate_new(model: torch.nn.Module, original_model: torch.nn.Modu
 
     for task_id in range(args.num_tasks):
 
-        #ags-cl
-        # if task_id > 0:
-        #     freeze = {}
-        #     omega = None
-        #     for name, param in model.named_parameters():
-        #         if 'head' in name:
-        #             key = name.split('.')[0]
-                    
-        #             temp = torch.ones_like(param)
-        #             temp = temp.reshape((temp.size(0), omega[prekey].size(0) , -1))
-        #             temp[:, omega[prekey] == 0] = 0
-        #             temp[omega[key] == 0] = 1
-        #             freeze[key] = temp.reshape(param.shape)
-        #         else:
-        #             continue
+        #Transfer previous learned prompt params to the new prompt
+        if args.prompt_pool and args.shared_prompt_pool:
+            if task_id > 0:
+                prev_start = (task_id - 1) * args.top_k
+                prev_end = task_id * args.top_k
 
-        #         prekey = key
-        # Transfer previous learned prompt params to the new prompt
-        # if args.prompt_pool and args.shared_prompt_pool:
-        #     if task_id > 0:
-        #         prev_start = (task_id - 1) * args.top_k
-        #         prev_end = task_id * args.top_k
+                cur_start = prev_end
+                cur_end = (task_id + 1) * args.top_k
 
-        #         cur_start = prev_end
-        #         cur_end = (task_id + 1) * args.top_k
+                if (prev_end > args.size) or (cur_end > args.size):
+                    pass
+                else:
+                    cur_idx = (slice(None), slice(None), slice(cur_start, cur_end)) if args.use_prefix_tune_for_e_prompt else (slice(None), slice(cur_start, cur_end))
+                    prev_idx = (slice(None), slice(None), slice(prev_start, prev_end)) if args.use_prefix_tune_for_e_prompt else (slice(None), slice(prev_start, prev_end))
 
-        #         if (prev_end > args.size) or (cur_end > args.size):
-        #             pass
-        #         else:
-        #             cur_idx = (slice(None), slice(None), slice(cur_start, cur_end)) if args.use_prefix_tune_for_e_prompt else (slice(None), slice(cur_start, cur_end))
-        #             prev_idx = (slice(None), slice(None), slice(prev_start, prev_end)) if args.use_prefix_tune_for_e_prompt else (slice(None), slice(prev_start, prev_end))
-
-        #             with torch.no_grad():
-        #                 model.e_prompt.grad.zero_()
-        #                 model.e_prompt[cur_idx] = model.e_prompt[prev_idx]
-        #                 optimizer.param_groups[0]['params'] = model.parameters()
+                    with torch.no_grad():
+                        model.e_prompt.grad.zero_()
+                        model.e_prompt[cur_idx] = model.e_prompt[prev_idx]
+                        optimizer.param_groups[0]['params'] = model.parameters()
         
      
         # Create new optimizer for each task to clear optimizer status
@@ -629,15 +612,15 @@ def train_and_evaluate_new(model: torch.nn.Module, original_model: torch.nn.Modu
         
         sample_data(original_model=original_model, dataloader_each_class=dataloader_each_class[task_id]['train_each_class'], gm_list=gm_list, device=device, task_id=task_id, args=args)
 
-        # for epoch in range(args.epochs):
+        for epoch in range(args.epochs):
             
-        #     train_simple_stat = train_simple_model(model=model, criterion=criterion,
-        #                                     data_loader=data_loader[task_id]['train'], optimizer=optimizer,
-        #                                     device=device, epoch=epoch, max_norm = args.clip_grad,
-        #                                     set_training_mode=True, task_id=task_id, class_mask=class_mask,
-        #                                     args=args)
-        #     if lr_scheduler:
-        #         lr_scheduler.step(epoch)
+            train_simple_stat = train_simple_model(model=model, criterion=criterion,
+                                            data_loader=data_loader[task_id]['train'], optimizer=optimizer,
+                                            device=device, epoch=epoch, max_norm = args.clip_grad,
+                                            set_training_mode=True, task_id=task_id, class_mask=class_mask,
+                                            args=args)
+            if lr_scheduler:
+                lr_scheduler.step(epoch)
         train_task_model(task_model=task_model, device=device, gm_list=gm_list, epochs=90, task_id=task_id)
 
         test_stat = evaluate_till_now_new(model=model, original_model=original_model, task_model=task_model, data_loader=data_loader, device=device,
@@ -650,7 +633,7 @@ def train_and_evaluate_new(model: torch.nn.Module, original_model: torch.nn.Modu
             state_dict = {
                     'model': model.state_dict(),
                     'optimizer': optimizer.state_dict(),
-                    #'epoch': epoch,
+                    'epoch': epoch,
                     'args': args,
                 }
             if args.sched is not None and args.sched != 'constant':
@@ -658,21 +641,14 @@ def train_and_evaluate_new(model: torch.nn.Module, original_model: torch.nn.Modu
             
             utils.save_on_master(state_dict, checkpoint_path)
 
-        # log_stats = {**{f'train_{k}': v for k, v in train_simple_stat.items()},
-        #     **{f'test_{k}': v for k, v in test_stat.items()},
-        #     'epoch': epoch,}
+        log_stats = {**{f'train_{k}': v for k, v in train_simple_stat.items()},
+            **{f'test_{k}': v for k, v in test_stat.items()},
+            'epoch': epoch,}
 
-        # if args.output_dir and utils.is_main_process():
-        #     with open(os.path.join(args.output_dir, '{}_stats.txt'.format(datetime.datetime.now().strftime('log_%Y_%m_%d_%H_%M'))), 'a') as f:
-        #         f.write(json.dumps(log_stats) + '\n')
+        if args.output_dir and utils.is_main_process():
+            with open(os.path.join(args.output_dir, '{}_stats.txt'.format(datetime.datetime.now().strftime('log_%Y_%m_%d_%H_%M'))), 'a') as f:
+                f.write(json.dumps(log_stats) + '\n')
         
-        #store old head model use ags-cl
-        # head_old = deepcopy(model.head)
-        # head_old.train()
-        # for param in head_old.parameters():
-        #     param.requires_grad = False
-
-
 
 
 @torch.no_grad()
