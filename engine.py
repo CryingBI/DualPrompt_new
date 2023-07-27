@@ -508,7 +508,7 @@ def sample_data(original_model: torch.nn.Module, dataloader_each_class, gm_list,
                 gm_list.append(gm)
         else:
             gm = GaussianMixture(n_components=1, random_state=0).fit(x_encoded.cpu().detach().numpy())
-
+            gm_list.append(gm)
 
 @torch.no_grad()
 def evaluate_task_model(original_model: torch.nn.Module, task_model: torch.nn.Module, data_loader, 
