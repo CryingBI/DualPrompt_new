@@ -18,9 +18,9 @@ git remote remove origin
 git remote add origin yourRemoteUrl
 git push -u origin master
 ```
-Đăng nhập vào tài khoản Kaggle của bạn, tạo một Notebook mới, chọn thiết bị GPU P100.
-Sử dụng các câu lệnh sau để bắt đầu chạy thử nghiệm (Tạo mỗi câu lệnh một ô để chạy).
-Tập dữ liệu Split-CIFAR-100 tương ứng chọn cifar100_dualprompt, tập dữ liệu Split-ImageNet-R tương ứng chọn imr_dualprompt trong lệnh torchrun.
+Đăng nhập vào tài khoản Kaggle của bạn, tạo một Notebook mới, chọn thiết bị GPU P100. <br>
+Sử dụng các câu lệnh sau để bắt đầu chạy thử nghiệm (Tạo mỗi câu lệnh một ô để chạy). <br>
+Tập dữ liệu Split-CIFAR-100 tương ứng chọn cifar100_dualprompt, tập dữ liệu Split-ImageNet-R tương ứng chọn imr_dualprompt trong lệnh torchrun. <br>
 ```
 !git clone Your_Repo
 
