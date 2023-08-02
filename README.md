@@ -12,17 +12,15 @@ Phần cứng sử dụng:
 ```
 git clone https://github.com/CryingBI/DualPrompt_new.git
 ```
-Tiếp theo tạo một kho lưu trữ mới trên Github của bạn.
-```
-Sau đó loại bỏ git remote chính và thêm git remote cho kho lưu trữ bạn vừa tạo
+Tiếp theo tạo một kho lưu trữ mới trên Github của bạn, sau đó loại bỏ git remote chính và thêm git remote cho kho lưu trữ bạn vừa tạo.
 ```
 git remote remove origin
 git remote add origin yourRemoteUrl
 git push -u origin master
 ```
 Đăng nhập vào tài khoản Kaggle của bạn, tạo một Notebook mới, chọn thiết bị GPU P100.
-```
-Sử dụng các câu lệnh sau để bắt đầu chạy thử nghiệm (Tạo mỗi câu lệnh một ô để chạy)
+Sử dụng các câu lệnh sau để bắt đầu chạy thử nghiệm (Tạo mỗi câu lệnh một ô để chạy).
+Tập dữ liệu Split-CIFAR-100 tương ứng chọn cifar100_dualprompt, tập dữ liệu Split-ImageNet-R tương ứng chọn imr_dualprompt trong lệnh torchrun.
 ```
 !git clone Your_Repo
 
@@ -33,7 +31,7 @@ Sử dụng các câu lệnh sau để bắt đầu chạy thử nghiệm (Tạo
 !torchrun \
         --nproc_per_node=1 \
         main.py \
-        imr_dualprompt \
+        <imr_dualprompt> or <cifar100_dualprompt> \
         --model vit_base_patch16_224 \
         --batch-size 24 \
         --data-path /local_datasets/ \
