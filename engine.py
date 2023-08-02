@@ -271,6 +271,8 @@ def train_and_evaluate(model: torch.nn.Module, model_without_ddp: torch.nn.Modul
                 f.write(json.dumps(log_stats) + '\n')
 
 
+
+#New code
 def train_task_model(task_model: torch.nn.Module, device, gm_list, epochs, args, task_id=-1,):
 
     task_model.train()
